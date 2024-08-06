@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "fasterbench"
+  site-url: "https://FasterAI-Labs.github.io/fasterbench"
+  description: "A library for benchmarking AI models"
+  repo-branch: main
+  repo-url: "https://github.com/FasterAI-Labs/fasterbench"
