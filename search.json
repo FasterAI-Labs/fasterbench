@@ -1,0 +1,82 @@
+[
+  {
+    "objectID": "benchmark.html",
+    "href": "benchmark.html",
+    "title": "benchmark",
+    "section": "",
+    "text": "source\n\n\n\n get_model_size (model, temp_path='temp_model.pth')\n\n\nsource\n\n\n\n\n get_num_parameters (model)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#size",
+    "href": "benchmark.html#size",
+    "title": "benchmark",
+    "section": "",
+    "text": "source\n\n\n\n get_model_size (model, temp_path='temp_model.pth')\n\n\nsource\n\n\n\n\n get_num_parameters (model)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#speed",
+    "href": "benchmark.html#speed",
+    "title": "benchmark",
+    "section": "Speed",
+    "text": "Speed\n\nsource\n\nevaluate_gpu_speed\n\n evaluate_gpu_speed (model, dummy_input, warmup_rounds=50,\n                     test_rounds=100)\n\n\nsource\n\n\nevaluate_cpu_speed\n\n evaluate_cpu_speed (model, dummy_input, warmup_rounds=50,\n                     test_rounds=100)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#compute",
+    "href": "benchmark.html#compute",
+    "title": "benchmark",
+    "section": "Compute",
+    "text": "Compute\n\nsource\n\nget_model_macs\n\n get_model_macs (model, inputs)\n\n\nsource\n\n\nevaluate_gpu_memory_usage\n\n evaluate_gpu_memory_usage (model, dummy_input, warmup_rounds=10,\n                            test_rounds=100)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#energy",
+    "href": "benchmark.html#energy",
+    "title": "benchmark",
+    "section": "Energy",
+    "text": "Energy\n\nsource\n\nevaluate_emissions\n\n evaluate_emissions (model, dummy_input, warmup_rounds=50,\n                     test_rounds=100)\n\n\nsource\n\n\nbenchmark\n\n benchmark (model, dummy_input)\n\n\nfrom torchvision.models import resnet18\n\nmodel = resnet18()\ndummy_input = torch.randn(64, 3, 224, 224)\n\n\nbenchmark(model, dummy_input)\n\n[INFO] Register count_convNd() for &lt;class 'torch.nn.modules.conv.Conv2d'&gt;.\n[INFO] Register count_normalization() for &lt;class 'torch.nn.modules.batchnorm.BatchNorm2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.activation.ReLU'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.pooling.MaxPool2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.container.Sequential'&gt;.\n[INFO] Register count_adap_avgpool() for &lt;class 'torch.nn.modules.pooling.AdaptiveAvgPool2d'&gt;.\n[INFO] Register count_linear() for &lt;class 'torch.nn.modules.linear.Linear'&gt;.\n\n\n[codecarbon INFO @ 13:19:30] offline tracker init\n[codecarbon INFO @ 13:19:30] [setup] RAM Tracking...\n[codecarbon INFO @ 13:19:30] [setup] GPU Tracking...\n[codecarbon INFO @ 13:19:30] Tracking Nvidia GPU via pynvml\n[codecarbon INFO @ 13:19:30] [setup] CPU Tracking...\n[codecarbon WARNING @ 13:19:30] No CPU tracking mode found. Falling back on CPU constant mode.\n[codecarbon WARNING @ 13:19:32] We saw that you have a 12th Gen Intel(R) Core(TM) i9-12900K but we don't know it. Please contact us.\n[codecarbon INFO @ 13:19:32] CPU Model on constant consumption mode: 12th Gen Intel(R) Core(TM) i9-12900K\n[codecarbon INFO @ 13:19:32] &gt;&gt;&gt; Tracker's metadata:\n[codecarbon INFO @ 13:19:32]   Platform system: Linux-5.15.0-113-generic-x86_64-with-glibc2.31\n[codecarbon INFO @ 13:19:32]   Python version: 3.9.0\n[codecarbon INFO @ 13:19:32]   CodeCarbon version: 2.3.4\n[codecarbon INFO @ 13:19:32]   Available RAM : 125.578 GB\n[codecarbon INFO @ 13:19:32]   CPU count: 24\n[codecarbon INFO @ 13:19:32]   CPU model: 12th Gen Intel(R) Core(TM) i9-12900K\n[codecarbon INFO @ 13:19:32]   GPU count: 1\n[codecarbon INFO @ 13:19:32]   GPU model: 1 x NVIDIA GeForce RTX 3090\n[codecarbon INFO @ 13:19:33] Energy consumed for RAM : 0.000016 kWh. RAM Power : 47.091885566711426 W\n[codecarbon INFO @ 13:19:33] Energy consumed for all GPUs : 0.000109 kWh. Total GPU Power : 328.4733410957834 W\n[codecarbon INFO @ 13:19:33] Energy consumed for all CPUs : 0.000014 kWh. Total CPU Power : 42.5 W\n[codecarbon INFO @ 13:19:33] 0.000139 kWh of electricity used since the beginning.\n\n\nModel Size: 46.84 MB (disk), 11.690M parameters\nGPU Latency: 13.110 ms (± 0.022 ms)\nGPU Throughput: 4881.84 inferences/sec\nCPU Latency: 475.591 ms (± 6.319 ms)\nCPU Throughput: 134.57 inferences/sec\nModel MACs: 116.738G\nAverage GPU Memory Usage: 94.18 MB\nPeak GPU Memory Usage: 504.97 MB\nAverage Carbon Emissions per Inference: 0.000526 gCO2e\nAverage Energy Consumption per Inference: 0.001386 Wh\n\n\n{'disk_size': 46835512,\n 'num_parameters': '11.690M',\n 'gpu_latency': 13.109815979003907,\n 'gpu_throughput': 4881.838166340362,\n 'cpu_latency': 475.5907801212743,\n 'cpu_throughput': 134.56947164467778,\n 'macs': '116.738G',\n 'avg_gpu_memory': 94181376.0,\n 'peak_gpu_memory': 504967168,\n 'avg_emissions': 5.256446662000115e-07,\n 'avg_energy': 1.385974440225733e-06}",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "fasterbench",
+    "section": "",
+    "text": "pip install fasterbench",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "fasterbench",
+    "section": "",
+    "text": "pip install fasterbench",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "fasterbench",
+    "section": "How to use",
+    "text": "How to use\nfrom torchvision.models import resnet18\n\nmodel = resnet18()\ndummy_input = torch.randn(64, 3, 224, 224)\n\nbenchmark(model, dummy_input)",
+    "crumbs": [
+      "fasterbench"
+    ]
+  }
+]
