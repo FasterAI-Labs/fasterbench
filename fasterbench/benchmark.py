@@ -2,7 +2,15 @@
 
 # %% auto 0
 __all__ = ['get_model_size', 'get_num_parameters', 'evaluate_gpu_speed', 'evaluate_cpu_speed', 'get_model_macs',
-           'evaluate_gpu_memory_usage', 'evaluate_emissions', 'format_number', 'benchmark']
+           'evaluate_gpu_memory_usage', 'evaluate_emissions', 'benchmark']
+
+# %% ../nbs/00_benchmark.ipynb 4
+import torch
+import time
+from codecarbon import OfflineEmissionsTracker
+import numpy as np
+import os
+from thop import profile, clever_format
 
 # %% ../nbs/00_benchmark.ipynb 6
 def get_model_size(model, temp_path="temp_model.pth"):
@@ -135,22 +143,11 @@ def evaluate_emissions(model, dummy_input, warmup_rounds=50, test_rounds=100):
     return average_emissions_per_inference, average_energy_per_inference
 
 # %% ../nbs/00_benchmark.ipynb 16
-def format_number(num):
-    if num >= 1e9:
-        return f"{num/1e9:.2f} B"
-    elif num >= 1e6:
-        return f"{num/1e6:.2f} M"
-    elif num >= 1e3:
-        return f"{num/1e3:.2f} K"
-    else:
-        return f"{num:.2f}"
-
-# %% ../nbs/00_benchmark.ipynb 17
 @torch.inference_mode()
 def benchmark(model, dummy_input):
     # Model Size
     disk_size = get_model_size(model)
-    num_parameters = get_num_parameters(model)
+    #num_parameters = get_num_parameters(model)
     
     # GPU Speed
     gpu_latency, gpu_std_latency, gpu_throughput = evaluate_gpu_speed(model, dummy_input)
@@ -159,7 +156,9 @@ def benchmark(model, dummy_input):
     cpu_latency, cpu_std_latency, cpu_throughput = evaluate_cpu_speed(model, dummy_input)
     
     # Model MACs
-    macs = get_model_macs(model, dummy_input)
+    #macs = get_model_macs(model, dummy_input)
+    macs, params = profile(model, inputs=(dummy_input, ))
+    macs, num_parameters = clever_format([macs, params], "%.3f")
     
     # GPU Memory Usage
     avg_gpu_memory, peak_gpu_memory = evaluate_gpu_memory_usage(model, dummy_input)
@@ -168,12 +167,12 @@ def benchmark(model, dummy_input):
     avg_emissions, avg_energy = evaluate_emissions(model, dummy_input)
     
     # Print results
-    print(f"Model Size: {disk_size / 1e6:.2f} MB (disk), {format_number(num_parameters)} parameters")
+    print(f"Model Size: {disk_size / 1e6:.2f} MB (disk), {num_parameters} parameters")
     print(f"GPU Latency: {gpu_latency:.3f} ms (± {gpu_std_latency:.3f} ms)")
     print(f"GPU Throughput: {gpu_throughput:.2f} inferences/sec")
     print(f"CPU Latency: {cpu_latency:.3f} ms (± {cpu_std_latency:.3f} ms)")
     print(f"CPU Throughput: {cpu_throughput:.2f} inferences/sec")
-    print(f"Model MACs: {format_number(macs)}")
+    print(f"Model MACs: {macs}")
     print(f"Average GPU Memory Usage: {avg_gpu_memory / 1e6:.2f} MB")
     print(f"Peak GPU Memory Usage: {peak_gpu_memory / 1e6:.2f} MB")
     print(f"Average Carbon Emissions per Inference: {avg_emissions*1e3:.6f} gCO2e")
