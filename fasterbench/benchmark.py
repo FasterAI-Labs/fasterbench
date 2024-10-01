@@ -235,6 +235,7 @@ def compare_models(model_list, dls):
     table.field_names = [""] + model_names
     table.align = "r"
     table.align[""] = "l"
+    table.align["Original Model"] = "l"
 
     dummy_input = next(iter(dls.valid))[0][0][None].to('cpu')
 
