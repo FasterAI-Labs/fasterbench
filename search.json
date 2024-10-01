@@ -1,0 +1,82 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "fasterbench",
+    "section": "",
+    "text": "pip install fasterbench",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "fasterbench",
+    "section": "",
+    "text": "pip install fasterbench",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "fasterbench",
+    "section": "How to use",
+    "text": "How to use\nfrom torchvision.models import resnet18\n\nmodel = resnet18()\ndummy_input = torch.randn(64, 3, 224, 224)\n\nbenchmark(model, dummy_input)",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "benchmark.html",
+    "href": "benchmark.html",
+    "title": "benchmark",
+    "section": "",
+    "text": "import warnings\nwarnings.filterwarnings('ignore')",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#size",
+    "href": "benchmark.html#size",
+    "title": "benchmark",
+    "section": "Size",
+    "text": "Size\n\nsource\n\nget_model_size\n\n get_model_size (model, temp_path='temp_model.pth')\n\n\nsource\n\n\nget_num_parameters\n\n get_num_parameters (model)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#speed",
+    "href": "benchmark.html#speed",
+    "title": "benchmark",
+    "section": "Speed",
+    "text": "Speed\n\nsource\n\nevaluate_gpu_speed\n\n evaluate_gpu_speed (model, dummy_input, warmup_rounds=50,\n                     test_rounds=100)\n\n\nsource\n\n\nevaluate_cpu_speed\n\n evaluate_cpu_speed (model, dummy_input, warmup_rounds=50,\n                     test_rounds=100)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#compute",
+    "href": "benchmark.html#compute",
+    "title": "benchmark",
+    "section": "Compute",
+    "text": "Compute\n\nsource\n\nget_model_macs\n\n get_model_macs (model, inputs)\n\n\nsource\n\n\nevaluate_gpu_memory_usage\n\n evaluate_gpu_memory_usage (model, dummy_input, warmup_rounds=10,\n                            test_rounds=100)",
+    "crumbs": [
+      "benchmark"
+    ]
+  },
+  {
+    "objectID": "benchmark.html#energy",
+    "href": "benchmark.html#energy",
+    "title": "benchmark",
+    "section": "Energy",
+    "text": "Energy\n\nsource\n\nevaluate_emissions\n\n evaluate_emissions (model, dummy_input, warmup_rounds=50,\n                     test_rounds=100)\n\n\nsource\n\n\nbenchmark\n\n benchmark (model, dummy_input)\n\n\nfrom torchvision.models import resnet18\n\nmodel = resnet18()\ndummy_input = torch.randn(64, 3, 224, 224)\n\n\nbenchmark(model, dummy_input)\n\n[INFO] Register count_convNd() for &lt;class 'torch.nn.modules.conv.Conv2d'&gt;.\n[INFO] Register count_normalization() for &lt;class 'torch.nn.modules.batchnorm.BatchNorm2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.activation.ReLU'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.pooling.MaxPool2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.container.Sequential'&gt;.\n[INFO] Register count_adap_avgpool() for &lt;class 'torch.nn.modules.pooling.AdaptiveAvgPool2d'&gt;.\n[INFO] Register count_linear() for &lt;class 'torch.nn.modules.linear.Linear'&gt;.\n\n\n[codecarbon INFO @ 13:19:30] offline tracker init\n[codecarbon INFO @ 13:19:30] [setup] RAM Tracking...\n[codecarbon INFO @ 13:19:30] [setup] GPU Tracking...\n[codecarbon INFO @ 13:19:30] Tracking Nvidia GPU via pynvml\n[codecarbon INFO @ 13:19:30] [setup] CPU Tracking...\n[codecarbon WARNING @ 13:19:30] No CPU tracking mode found. Falling back on CPU constant mode.\n[codecarbon WARNING @ 13:19:32] We saw that you have a 12th Gen Intel(R) Core(TM) i9-12900K but we don't know it. Please contact us.\n[codecarbon INFO @ 13:19:32] CPU Model on constant consumption mode: 12th Gen Intel(R) Core(TM) i9-12900K\n[codecarbon INFO @ 13:19:32] &gt;&gt;&gt; Tracker's metadata:\n[codecarbon INFO @ 13:19:32]   Platform system: Linux-5.15.0-113-generic-x86_64-with-glibc2.31\n[codecarbon INFO @ 13:19:32]   Python version: 3.9.0\n[codecarbon INFO @ 13:19:32]   CodeCarbon version: 2.3.4\n[codecarbon INFO @ 13:19:32]   Available RAM : 125.578 GB\n[codecarbon INFO @ 13:19:32]   CPU count: 24\n[codecarbon INFO @ 13:19:32]   CPU model: 12th Gen Intel(R) Core(TM) i9-12900K\n[codecarbon INFO @ 13:19:32]   GPU count: 1\n[codecarbon INFO @ 13:19:32]   GPU model: 1 x NVIDIA GeForce RTX 3090\n[codecarbon INFO @ 13:19:33] Energy consumed for RAM : 0.000016 kWh. RAM Power : 47.091885566711426 W\n[codecarbon INFO @ 13:19:33] Energy consumed for all GPUs : 0.000109 kWh. Total GPU Power : 328.4733410957834 W\n[codecarbon INFO @ 13:19:33] Energy consumed for all CPUs : 0.000014 kWh. Total CPU Power : 42.5 W\n[codecarbon INFO @ 13:19:33] 0.000139 kWh of electricity used since the beginning.\n\n\nModel Size: 46.84 MB (disk), 11.690M parameters\nGPU Latency: 13.110 ms (± 0.022 ms)\nGPU Throughput: 4881.84 inferences/sec\nCPU Latency: 475.591 ms (± 6.319 ms)\nCPU Throughput: 134.57 inferences/sec\nModel MACs: 116.738G\nAverage GPU Memory Usage: 94.18 MB\nPeak GPU Memory Usage: 504.97 MB\nAverage Carbon Emissions per Inference: 0.000526 gCO2e\nAverage Energy Consumption per Inference: 0.001386 Wh\n\n\n{'disk_size': 46835512,\n 'num_parameters': '11.690M',\n 'gpu_latency': 13.109815979003907,\n 'gpu_throughput': 4881.838166340362,\n 'cpu_latency': 475.5907801212743,\n 'cpu_throughput': 134.56947164467778,\n 'macs': '116.738G',\n 'avg_gpu_memory': 94181376.0,\n 'peak_gpu_memory': 504967168,\n 'avg_emissions': 5.256446662000115e-07,\n 'avg_energy': 1.385974440225733e-06}\n\n\n\n@torch.inference_mode()\ndef evaluate(model, dataloader, device=None, verbose=True):\n    if device is None: device = torch.device(\"cuda\")\n    model.eval()\n    model.to(device)\n\n    with torch.no_grad():\n        correct = 0\n        total = 0\n        local_acc = []\n        loader = tqdm(dataloader.valid, desc=\"valid\", leave=False)\n        for i, data in enumerate(loader):\n            images, labels = data\n            images, labels = images.to(device), labels.to(device)\n            outputs = model(images)\n            _, predicted = torch.max(outputs.data, 1)\n            total += labels.size(0) - 1\n            correct += ((predicted.as_subclass(torch.Tensor) == labels.as_subclass(torch.Tensor)).sum().item())\n\n        acc = 100 * correct / total\n        if verbose:\n            print(f\"Valid Accuracy: {acc:.2f} %\")\n        return acc\n\n\nsource\n\n\ncompute_model_metrics\n\n compute_model_metrics (model, dls, dummy_input)\n\n\nsource\n\n\ncompare_models\n\n compare_models (model_list, dls)\n\n\nfrom fastai.vision.all import *\npath = untar_data(URLs.PETS)\nfiles = get_image_files(path/\"images\")\n\ndef label_func(f): return f[0].isupper()\n\ndls = ImageDataLoaders.from_name_func(path, files, label_func, item_tfms=Resize(64))\n\n\nlearn = vision_learner(dls, resnet18, metrics=accuracy)\nlearn.unfreeze()\n\n\nlearn.fit_one_cycle(5)\n\n\n\n\n\n\n\n\nepoch\ntrain_loss\nvalid_loss\naccuracy\ntime\n\n\n\n\n0\n0.714393\n0.421342\n0.841678\n00:03\n\n\n1\n0.396920\n0.254652\n0.888363\n00:03\n\n\n2\n0.228655\n0.230342\n0.907307\n00:03\n\n\n3\n0.139857\n0.181267\n0.933018\n00:03\n\n\n4\n0.078330\n0.166232\n0.935724\n00:03\n\n\n\n\n\n\nmodel = deepcopy(learn.model)\n\n\nfrom fasterai.prune.all import *\n\npr_cb = PruneCallback(sparsity=25, context='local', criteria=large_final, schedule=one_cycle, layer_type=[nn.Conv2d])\nlearn.fit_one_cycle(3, cbs=pr_cb)\n\nPruning until a sparsity of [25]%\n\n\n\n\n\n\n\n\n\nepoch\ntrain_loss\nvalid_loss\naccuracy\ntime\n\n\n\n\n0\n0.050833\n0.203945\n0.932341\n00:04\n\n\n1\n0.157106\n0.257223\n0.897835\n00:04\n\n\n2\n0.189360\n0.263265\n0.894452\n00:04\n\n\n\n\n\nSparsity at the end of epoch 0: [5.2]%\nSparsity at the end of epoch 1: [24.15]%\nSparsity at the end of epoch 2: [25.0]%\nFinal Sparsity: [25.0]%\n\n\n\npruned_model = deepcopy(learn.model)\n\n\nfrom fasterai.quantize.all import *\n\nqt = Quantizer()\n\nq_model = qt.quantize(learn.model.to('cpu'), dls)\n\n/home/HubensN/miniconda3/envs/clean/lib/python3.9/site-packages/torch/ao/quantization/observer.py:221: UserWarning: Please use quant_min and quant_max to specify the range for observers.                     reduce_range will be deprecated in a future release of PyTorch.\n  warnings.warn(\n\n\n\ncompare_models([model, pruned_model, q_model], dls)\n\n\n\n\nValid Accuracy: 95.12 %\n\n\n\n\n\nValid Accuracy: 90.92 %\n\n\n\n\n\nValid Accuracy: 89.61 %\n+---------------------+----------------+-------------------+-------------------+\n|                     | Original Model |      Pruned Model |   Quantized Model |\n+---------------------+----------------+-------------------+-------------------+\n| Latency (ms/sample) | 3239.0         | 2640.8    (1.23x) | 2151.0    (1.51x) |\n| Accuracy (%)        | 95.12          | 90.92    (-4.20%) | 89.61    (-5.51%) |\n| Params (M)          | 11.7           | 6.69      (1.75x) |                 * |\n| Size (MiB)          | 46912066       | 26829378  (1.75x) | 6827042   (6.87x) |\n| MACs (M)            | 149            | 86        (1.73x) |                 * |\n+---------------------+----------------+-------------------+-------------------+",
+    "crumbs": [
+      "benchmark"
+    ]
+  }
+]
