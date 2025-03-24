@@ -4,7 +4,8 @@
 
 # %% auto 0
 __all__ = ['get_model_size', 'get_num_parameters', 'evaluate_gpu_speed', 'evaluate_cpu_speed', 'get_model_macs',
-           'evaluate_gpu_memory_usage', 'evaluate_emissions', 'benchmark', 'compute_model_metrics', 'compare_models']
+           'evaluate_gpu_memory_usage', 'evaluate_emissions', 'benchmark', 'evaluate', 'compute_model_metrics',
+           'compare_models']
 
 # %% ../nbs/00_benchmark.ipynb 5
 import torch
@@ -16,9 +17,13 @@ from thop import profile, clever_format
 from tqdm.notebook import tqdm
 from prettytable import PrettyTable
 from torchprofile import profile_macs
+import torch.nn as nn
+from typing import Dict, List, Tuple, Any, Union, Optional
 
 # %% ../nbs/00_benchmark.ipynb 7
-def get_model_size(model, temp_path="temp_model.pth"):
+def get_model_size(model: nn.Module,            # The model we want to study
+                   temp_path: str ="temp.pth"   # The temporary path used to save the model
+                  ) -> int:
     try: model.save(temp_path)
     except: torch.save(model.state_dict(), temp_path)
     
@@ -28,12 +33,17 @@ def get_model_size(model, temp_path="temp_model.pth"):
     return model_size
 
 # %% ../nbs/00_benchmark.ipynb 8
-def get_num_parameters(model):
+def get_num_parameters(model: nn.Module  # The model we want to study
+                      ) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-# %% ../nbs/00_benchmark.ipynb 10
+# %% ../nbs/00_benchmark.ipynb 11
 @torch.inference_mode()
-def evaluate_gpu_speed(model, dummy_input, warmup_rounds=50, test_rounds=100):
+def evaluate_gpu_speed(model:nn.Module,            # The model we want to evaluate
+                       dummy_input: torch.Tensor,  # The input used to evaluate the model
+                       warmup_rounds:int=50,       # The amount of warmup iterations
+                       test_rounds:int=100        # The amount of iterations used to evaluate the speed
+                      )-> Tuple[float, float, float]:
     device = torch.device("cuda")
     model.eval()
     model.to(device)
@@ -63,9 +73,13 @@ def evaluate_gpu_speed(model, dummy_input, warmup_rounds=50, test_rounds=100):
 
     return mean_latency, std_latency, throughput
 
-# %% ../nbs/00_benchmark.ipynb 11
+# %% ../nbs/00_benchmark.ipynb 12
 @torch.inference_mode()
-def evaluate_cpu_speed(model, dummy_input, warmup_rounds=50, test_rounds=100):
+def evaluate_cpu_speed(model:nn.Module,            # The model we want to evaluate
+                       dummy_input: torch.Tensor,  # The input used to evaluate the model
+                       warmup_rounds:int=50,       # The amount of warmup iterations
+                       test_rounds:int=100        # The amount of iterations used to evaluate the speed
+                      )-> Tuple[float, float, float]:
     device = torch.device("cpu")
     model.eval()
     model.to(device)
@@ -92,14 +106,20 @@ def evaluate_cpu_speed(model, dummy_input, warmup_rounds=50, test_rounds=100):
 
     return mean_latency, std_latency, throughput
 
-# %% ../nbs/00_benchmark.ipynb 13
+# %% ../nbs/00_benchmark.ipynb 15
 @torch.inference_mode()
-def get_model_macs(model, inputs) -> int:
+def get_model_macs(model,  # The model we want to evaluate
+                   inputs  # The input used to evaluate
+                  ) -> int:
     return profile_macs(model, inputs)
 
-# %% ../nbs/00_benchmark.ipynb 14
+# %% ../nbs/00_benchmark.ipynb 16
 @torch.inference_mode()
-def evaluate_gpu_memory_usage(model, dummy_input, warmup_rounds=10, test_rounds=100):
+def evaluate_gpu_memory_usage(model:nn.Module,             # The model we want to evaluate
+                              dummy_input:torch.Tensor,       # The input used to evaluate
+                              warmup_rounds:int=10,  # The amount of warmup iterations
+                              test_rounds:int=100    # The amount of iterations used to evaluate the speed
+                             )-> Tuple[float, float]:
     device = torch.device("cuda")
     model.eval()
     model.to(device)
@@ -123,9 +143,13 @@ def evaluate_gpu_memory_usage(model, dummy_input, warmup_rounds=10, test_rounds=
     
     return average_memory_usage, peak_memory_usage
 
-# %% ../nbs/00_benchmark.ipynb 16
+# %% ../nbs/00_benchmark.ipynb 18
 @torch.inference_mode()
-def evaluate_emissions(model, dummy_input, warmup_rounds=50, test_rounds=100):
+def evaluate_emissions(model:nn.Module,            # The model we want to evaluate
+                       dummy_input: torch.Tensor,  # The input used to evaluate the model
+                       warmup_rounds:int=50,       # The amount of warmup iterations
+                       test_rounds:int=100        # The amount of iterations used to evaluate the speed
+                      )-> Tuple[float, float]:
     device = torch.device("cuda")
     model.eval()
     model.to(device)
@@ -150,9 +174,11 @@ def evaluate_emissions(model, dummy_input, warmup_rounds=50, test_rounds=100):
     
     return average_emissions_per_inference, average_energy_per_inference
 
-# %% ../nbs/00_benchmark.ipynb 17
+# %% ../nbs/00_benchmark.ipynb 19
 @torch.inference_mode()
-def benchmark(model, dummy_input):
+def benchmark(model:nn.Module,          # The model we want to benchmark
+              dummy_input:torch.Tensor  # The input used to benchmark the model
+             )-> Dict[str, Union[float, str]]:
     # Model Size
     disk_size = get_model_size(model)
     #num_parameters = get_num_parameters(model)
@@ -202,8 +228,40 @@ def benchmark(model, dummy_input):
         
     }
 
-# %% ../nbs/00_benchmark.ipynb 18
-def compute_model_metrics(model, dls, dummy_input):
+# %% ../nbs/00_benchmark.ipynb 21
+@torch.inference_mode()
+def evaluate(model:nn.Module,   # The module to evaluate
+             dls:Any,           # The dataloader used to evaluate 
+             device=None,       # The device used to evaluate
+             verbose:bool=False # Add some verbose
+            ):
+    if device is None: device = torch.device("cuda")
+    model.eval()
+    model.to(device)
+
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        local_acc = []
+        loader = tqdm(dls.valid, desc="valid", leave=False)
+        for i, data in enumerate(loader):
+            images, labels = data
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0) - 1
+            correct += ((predicted.as_subclass(torch.Tensor) == labels.as_subclass(torch.Tensor)).sum().item())
+
+        acc = 100 * correct / total
+        if verbose:
+            print(f"Valid Accuracy: {acc:.2f} %")
+        return acc
+
+# %% ../nbs/00_benchmark.ipynb 22
+def compute_model_metrics(model:nn.Module,          # The model we want to evaluate
+                          dls:Any,                  # The dataloader used to measure accuracy
+                          dummy_input:torch.Tensor # The input used to evaluate the model
+                         ) -> Dict[str, Union[float, str]]:
     metrics = {}
     metrics['accuracy'] = round(evaluate(model, dls, device='cpu'), 2)
     metrics['latency'] = round(evaluate_cpu_speed(model.to("cpu"), dummy_input=dummy_input)[0] * 1000, 1)
@@ -218,9 +276,11 @@ def compute_model_metrics(model, dls, dummy_input):
         metrics['mac'] = "*"
     return metrics
 
-# %% ../nbs/00_benchmark.ipynb 19
+# %% ../nbs/00_benchmark.ipynb 23
 @torch.inference_mode()
-def compare_models(model_list, dls):
+def compare_models(model_list:List[nn.Module], # The list of models we want to compare
+                   dls: Any                    # The dataloader used to compare models
+                  )-> None:
 
     metrics_keys = ["latency", "accuracy", "params", "size", "mac"]
     metrics_names = {
