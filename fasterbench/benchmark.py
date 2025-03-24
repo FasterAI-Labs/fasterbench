@@ -148,7 +148,7 @@ def evaluate_emissions(model, dummy_input, warmup_rounds=50, test_rounds=100):
     
     return average_emissions_per_inference, average_energy_per_inference
 
-# %% ../nbs/00_benchmark.ipynb 18
+# %% ../nbs/00_benchmark.ipynb 17
 @torch.inference_mode()
 def benchmark(model, dummy_input):
     # Model Size
@@ -200,7 +200,7 @@ def benchmark(model, dummy_input):
         
     }
 
-# %% ../nbs/00_benchmark.ipynb 22
+# %% ../nbs/00_benchmark.ipynb 18
 def compute_model_metrics(model, dls, dummy_input):
     metrics = {}
     metrics['accuracy'] = round(evaluate(model, dls, device='cpu'), 2)
@@ -216,7 +216,7 @@ def compute_model_metrics(model, dls, dummy_input):
         metrics['mac'] = "*"
     return metrics
 
-# %% ../nbs/00_benchmark.ipynb 23
+# %% ../nbs/00_benchmark.ipynb 19
 @torch.inference_mode()
 def compare_models(model_list, dls):
 
