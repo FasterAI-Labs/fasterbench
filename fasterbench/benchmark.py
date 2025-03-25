@@ -278,10 +278,10 @@ def compute_model_metrics(model:nn.Module,          # The model we want to evalu
 
 # %% ../nbs/00_benchmark.ipynb 22
 @torch.inference_mode()
-def compare_models(model_list:List[nn.Module], # The list of models we want to compare
-                   dls: Any                    # The dataloader used to compare models
-                  )-> None:
-
+def compare_models(model_list: List[nn.Module], dls: Any) -> None:
+    if len(model_list) < 2:
+        raise ValueError("At least 2 models must be provided for comparison")
+    
     metrics_keys = ["latency", "accuracy", "params", "size", "mac"]
     metrics_names = {
         "latency": "Latency (ms/sample)",
@@ -290,50 +290,57 @@ def compare_models(model_list:List[nn.Module], # The list of models we want to c
         "size": "Size (MiB)",
         "mac": "MACs (M)",
     }
+    
+    # Generate dynamic model names based on count
+    model_names = ["Reference Model"] + [f"Model {i+1}" for i in range(1, len(model_list))]
+    
     table_data = {key: [metrics_names[key]] for key in metrics_keys}
-    model_names = ["Original Model", "Pruned Model", "Quantized Model"]
-
-
     table = PrettyTable()
     table.field_names = [""] + model_names
     table.align = "r"
     table.align[""] = "l"
-    table.align["Original Model"] = "l"
-
+    table.align["Reference Model"] = "l"
+    
     dummy_input = torch.Tensor(next(iter(dls.valid))[0][0][None]).to('cpu')
-
     model_metrics_list = []
+    
+    # Calculate metrics for all models
     for model in model_list:
         metrics = compute_model_metrics(model, dls, dummy_input)
         model_metrics_list.append(metrics)
-
+    
+    # Populate table data
     for metrics in model_metrics_list:
         for key in metrics_keys:
             table_data[key].append(metrics.get(key, "*"))
-
+    
+    # Format comparison data
     for key in metrics_keys:
         values = table_data[key]
-        original_value = values[1]
+        reference_value = values[1]  # First model is reference
+        
+        # Start from index 2 (second model) for comparisons
         for i in range(2, len(values)):
             current_value = values[i]
             gain_info = ''
+            
             try:
-                orig_val = float(original_value)
+                ref_val = float(reference_value)
                 curr_val = float(current_value)
+                
                 if key == 'accuracy':
-                    gain = curr_val - orig_val
+                    gain = curr_val - ref_val
                     gain_info = f'({gain:+.2f}%)'
                 else:
-                    gain = orig_val / curr_val if curr_val != 0 else float('inf')
+                    gain = ref_val / curr_val if curr_val != 0 else float('inf')
                     gain_info = f'({gain:.2f}x)' if gain != float('inf') else '(inf)'
             except (ValueError, TypeError):
                 gain_info = ''
-            if gain_info:
-                values[i] = f'{current_value:<8} {gain_info:>8}'
-            else:
-                values[i] = f'{current_value}'
-
+                
+            values[i] = f'{current_value:<8} {gain_info:>8}' if gain_info else f'{current_value}'
+    
+    # Add all rows to table
     for key in metrics_keys:
         table.add_row(table_data[key])
-
+        
     print(table)
