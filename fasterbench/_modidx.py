@@ -25,5 +25,7 @@ d = { 'settings': { 'branch': 'main',
                                                                                  'fasterbench/benchmark.py'),
                                        'fasterbench.benchmark.get_num_parameters': ( 'benchmark.html#get_num_parameters',
                                                                                      'fasterbench/benchmark.py')},
-            'fasterbench.plot': {'fasterbench.plot.create_radar_plot': ('plot.html#create_radar_plot', 'fasterbench/plot.py')},
+            'fasterbench.plot': { 'fasterbench.plot.create_radar_plot': ('plot.html#create_radar_plot', 'fasterbench/plot.py'),
+                                  'fasterbench.plot.create_tradeoff_plot': ('plot.html#create_tradeoff_plot', 'fasterbench/plot.py'),
+                                  'fasterbench.plot.plot_tradeoffs': ('plot.html#plot_tradeoffs', 'fasterbench/plot.py')},
             'fasterbench.utils': {'fasterbench.utils.parse_metric_value': ('utils.html#parse_metric_value', 'fasterbench/utils.py')}}}
