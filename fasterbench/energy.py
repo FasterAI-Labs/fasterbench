@@ -67,7 +67,7 @@ def compute_energy(
             model(x)
         _sync(dev)
 
-        # track ↓
+        # track
         tracker.start()
         t0 = time.perf_counter()
         for _ in range(steps):
@@ -76,7 +76,6 @@ def compute_energy(
         tracker.stop()
         dur_s = time.perf_counter() - t0
 
-    # ─── aggregate per-inference ──────────────────────────────────────
     ene_kwh = tracker.final_emissions_data.energy_consumed  # kWh total
     co2_kg  = tracker.final_emissions                       # kg  total
     mean_w  = (ene_kwh * 3600_000) / dur_s                  # kWh → J (×3.6 MJ), /s → W

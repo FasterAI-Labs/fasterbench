@@ -1,0 +1,14 @@
+website:
+  sidebar:
+    contents:
+      - index.ipynb
+      - 00_core.ipynb
+      - 01_plot.ipynb
+      - 01_size.ipynb
+      - 02_speed.ipynb
+      - 03_compute.ipynb
+      - 03_utils.ipynb
+      - 04_memory.ipynb
+      - 04_tutorial.ipynb
+      - 05_energy.ipynb
+      - benchmark.ipynb
