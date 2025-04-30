@@ -16,13 +16,13 @@ from .energy   import compute_energy_multi
 # %% auto 0
 __all__ = ['benchmark']
 
-# %% ../nbs/benchmark.ipynb 3
+# %% ../nbs/benchmark.ipynb 4
 def benchmark(
-    model: torch.nn.Module,
-    sample: torch.Tensor,
+    model: torch.nn.Module,                                                      # the model to profile (can stay on CPU)
+    sample: torch.Tensor,                                                        # dummy input of the right shape
     *,
-    metrics: Sequence[str] = ("size", "speed", "compute", "memory", "energy"),
-    speed_devices: Sequence[str | torch.device] | None = None,
+    metrics: Sequence[str] = ("size", "speed", "compute", "memory", "energy"),   # subset of {"size","speed","compute","memory","energy"} to compute
+    speed_devices: Sequence[str | torch.device] | None = None,                   # per-family device override; `None`means “CPU and CUDA if available”
     memory_devices: Sequence[str | torch.device] | None = None,
     energy_devices: Sequence[str | torch.device] | None = None,
     **kwargs,
