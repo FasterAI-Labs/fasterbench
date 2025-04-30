@@ -1,0 +1,172 @@
+[
+  {
+    "objectID": "benchmark.html",
+    "href": "benchmark.html",
+    "title": "Benchmark",
+    "section": "",
+    "text": "source\n\nbenchmark\n\n benchmark (model:torch.nn.modules.module.Module, sample:torch.Tensor,\n            metrics:Sequence[str]=('size', 'speed', 'compute', 'memory',\n            'energy'),\n            speed_devices:Optional[Sequence[str|torch.device]]=None,\n            memory_devices:Optional[Sequence[str|torch.device]]=None,\n            energy_devices:Optional[Sequence[str|torch.device]]=None,\n            **kwargs)\n\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nmodel\nModule\n\nthe model to profile (can stay on CPU)\n\n\nsample\nTensor\n\ndummy input of the right shape\n\n\nmetrics\nSequence\n(‘size’, ‘speed’, ‘compute’, ‘memory’, ‘energy’)\nsubset of {“size”,“speed”,“compute”,“memory”,“energy”} to compute\n\n\nspeed_devices\nOptional\nNone\nper-family device override; Nonemeans “CPU and CUDA if available”\n\n\nmemory_devices\nOptional\nNone\n\n\n\nenergy_devices\nOptional\nNone\n\n\n\nkwargs\nVAR_KEYWORD\n\n\n\n\nReturns\nDict",
+    "crumbs": [
+      "Benchmark"
+    ]
+  },
+  {
+    "objectID": "size.html",
+    "href": "size.html",
+    "title": "size",
+    "section": "",
+    "text": "source\n\ncompute_size\n\n compute_size (model:torch.nn.modules.module.Module)\n\nHigh‑level helper that returns a SizeMetrics instance.\n\nsource\n\n\nSizeMetrics\n\n SizeMetrics (disk_bytes:int, size_mib:float, num_params:int)\n\n\nsource\n\n\nget_num_parameters\n\n get_num_parameters (model:torch.nn.modules.module.Module,\n                     trainable_only:bool=True)\n\nCount the number of (optionally trainable) parameters.\n\nsource\n\n\nget_model_size\n\n get_model_size (model:torch.nn.modules.module.Module)\n\nReturn the on‑disk* size (in bytes) of the serialised model.*",
+    "crumbs": [
+      "size"
+    ]
+  },
+  {
+    "objectID": "compute.html",
+    "href": "compute.html",
+    "title": "Compute",
+    "section": "",
+    "text": "source\n\ncompute_compute\n\n compute_compute (model:torch.nn.modules.module.Module,\n                  dummy_input:torch.Tensor)\n\nReturn ComputeMetrics for a single forward pass.\n\nsource\n\n\nComputeMetrics\n\n ComputeMetrics (macs_m:float|str, params_m:float)\n\nMACs (in millions) and parameter count (also millions).",
+    "crumbs": [
+      "Compute"
+    ]
+  },
+  {
+    "objectID": "energy.html",
+    "href": "energy.html",
+    "title": "Energy",
+    "section": "",
+    "text": "source\n\ncompute_energy_multi\n\n compute_energy_multi (model:torch.nn.modules.module.Module,\n                       x:torch.Tensor,\n                       devices:Optional[Sequence[str|torch.device]]=None,\n                       **kw)\n\n\nsource\n\n\ncompute_energy\n\n compute_energy (model:torch.nn.modules.module.Module, x:torch.Tensor,\n                 device:str|torch.device='cuda', warmup:int=20,\n                 steps:int=100, offline:bool=True,\n                 country_iso:str|None=None, measure_secs:int=1)\n\n\nsource\n\n\nEnergyMetrics\n\n EnergyMetrics (mean_watts:float, energy_wh:float, co2_eq_g:float)",
+    "crumbs": [
+      "Energy"
+    ]
+  },
+  {
+    "objectID": "plot.html",
+    "href": "plot.html",
+    "title": "plot",
+    "section": "",
+    "text": "source\n\ncreate_radar_plot\n\n create_radar_plot (benchmark_results:Sequence[Mapping[str,Any]],\n                    model_names:Optional[Sequence[str]]=None,\n                    reference_max:Optional[Mapping[str,float]]=None)",
+    "crumbs": [
+      "plot"
+    ]
+  },
+  {
+    "objectID": "utils.html",
+    "href": "utils.html",
+    "title": "utils",
+    "section": "",
+    "text": "source\n\nparse_metric_value\n\n parse_metric_value (value_str)\n\nConvert string values with units (M, G) to float",
+    "crumbs": [
+      "utils"
+    ]
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "core",
+    "section": "",
+    "text": "import nbdev; nbdev.nbdev_export()",
+    "crumbs": [
+      "core"
+    ]
+  },
+  {
+    "objectID": "memory.html",
+    "href": "memory.html",
+    "title": "Memory",
+    "section": "",
+    "text": "source\n\ncompute_memory_multi\n\n compute_memory_multi (model:torch.nn.modules.module.Module,\n                       dummy_input:torch.Tensor,\n                       devices:Optional[Iterable[str]]=None,\n                       warmup_rounds:int=10, test_rounds:int=100)\n\nReturn memory metrics for each device in devices* (default cpu + cuda).*\n\nsource\n\n\ncompute_memory\n\n compute_memory (model:torch.nn.modules.module.Module,\n                 dummy_input:torch.Tensor, warmup_rounds:int=10,\n                 test_rounds:int=100)\n\nAlias for GPU if available, else CPU.\n\nsource\n\n\nMemoryMetrics\n\n MemoryMetrics (avg_mib:float, peak_mib:float, reserved_mib:float,\n                device:str)\n\nAverage & peak resident memory (MiB) for one device.",
+    "crumbs": [
+      "Memory"
+    ]
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "fasterbench",
+    "section": "Overview",
+    "text": "Overview\nfasterbench is a comprehensive benchmarking library for PyTorch models that helps AI researchers and engineers evaluate model performance across five critical dimensions:\n\nSize: Model disk size and parameter count\nSpeed: Latency and throughput on both GPU and CPU\nCompute: MACs (multiply-accumulate operations)\nMemory: Peak and average memory consumption\nEnergy: Power consumption and carbon emissions\n\nWhether you’re optimizing for edge deployment, comparing model architectures, or researching model efficiency, FasterBench provides the metrics you need with minimal setup.",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "fasterbench",
+    "section": "Installation",
+    "text": "Installation\npip install fasterbench",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "fasterbench",
+    "section": "Quick Start",
+    "text": "Quick Start\nimport torch\nfrom torchvision.models import resnet18\nfrom fasterbench import benchmark\n\n# Load your model\nmodel = resnet18()\n\n# Create sample input\ndummy_input = torch.randn(1, 3, 224, 224)\n\n# Run comprehensive benchmarks\nresults = benchmark(model, dummy_input)\n\n# Print results\nfor metric, value in results.items():\n    print(f\"{metric}: {value}\")",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#features",
+    "href": "index.html#features",
+    "title": "fasterbench",
+    "section": "Features",
+    "text": "Features\n\nAll-in-one Benchmarking\nGet comprehensive metrics with a single function call:\n# Measure all metrics\nresults = benchmark(model, dummy_input)\n\n# Or select specific metrics\nresults = benchmark(model, dummy_input, metrics=[\"size\", \"speed\"])\n\n\nSize Metrics\nEvaluate model size characteristics:\nfrom fasterbench import compute_size\n\nsize_metrics = compute_size(model)\nprint(f\"Disk Size: {size_metrics.size_mib:.2f} MiB\")\nprint(f\"Parameters: {size_metrics.num_params:,}\")\n\n\nSpeed Metrics\nMeasure inference performance across devices:\nfrom fasterbench import compute_speed_multi\n\nspeed_metrics = compute_speed_multi(model, dummy_input)\nfor device, metrics in speed_metrics.items():\n    print(f\"{device} latency (P50): {metrics.p50_ms:.2f} ms\")\n    print(f\"{device} throughput: {metrics.throughput_s:.2f} inferences/sec\")\n\n\nCompute Metrics\nQuantify computational complexity:\nfrom fasterbench import compute_compute\n\ncompute_metrics = compute_compute(model, dummy_input)\nprint(f\"MACs: {compute_metrics.macs_m} million\")\n\n\nMemory Metrics\nProfile memory usage:\nfrom fasterbench import compute_memory_multi\n\nmemory_metrics = compute_memory_multi(model, dummy_input)\nfor device, metrics in memory_metrics.items():\n    print(f\"{device} peak memory: {metrics.peak_mib:.2f} MiB\")\n\n\nEnergy Metrics\nMeasure environmental impact:\nfrom fasterbench import compute_energy_multi\n\n# Requires codecarbon package\nenergy_metrics = compute_energy_multi(model, dummy_input)\nfor device, metrics in energy_metrics.items():\n    print(f\"{device} power usage: {metrics.mean_watts:.2f} W\")\n    print(f\"{device} CO2: {metrics.co2_eq_g:.6f} g CO₂-eq per inference\")\n\n\nThread Count Optimization\nFind the optimal number of CPU threads:\nfrom fasterbench import sweep_threads\n\nthread_results = sweep_threads(model, dummy_input, thread_counts=[1, 2, 4, 8, 16])\nfor result in thread_results:\n    print(f\"Threads: {result['threads']}, Latency: {result['mean_ms']:.2f} ms\")\n\n\nVisualize Results\nCreate radar plots to compare multiple models:\nfrom fasterbench.benchmark import benchmark\nfrom fasterbench.plot import *\nfrom torchvision.models import resnet18, mobilenet_v3_large\nimport torch\n\ndummy = torch.randn(8,3,224,224)\n\nresnet   = benchmark(resnet18(),            dummy,\n                     metrics=(\"size\",\"speed\",\"compute\",\"energy\"))\nmobilenet= benchmark(mobilenet_v3_large(),  dummy,\n                     metrics=(\"size\",\"speed\",\"compute\",\"energy\"))\nfig = create_radar_plot([resnet, mobilenet],\n                        model_names=[\"ResNet-18\", \"MobileNet-V3\"])\nfig.show()",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#documentation",
+    "href": "index.html#documentation",
+    "title": "fasterbench",
+    "section": "Documentation",
+    "text": "Documentation\nFor more detailed usage examples and API documentation, visit our documentation.",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#contributing",
+    "href": "index.html#contributing",
+    "title": "fasterbench",
+    "section": "Contributing",
+    "text": "Contributing\nContributions are welcome! Please feel free to submit a Pull Request.",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "fasterbench",
+    "section": "License",
+    "text": "License\nThis project is licensed under the Apache 2.0 License - see the LICENSE file for details.",
+    "crumbs": [
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "tutorial.html",
+    "href": "tutorial.html",
+    "title": "Tutorial",
+    "section": "",
+    "text": "from fasterbench.benchmark import benchmark\nfrom fasterbench.plot import *\nfrom torchvision.models import resnet18, mobilenet_v3_large\nimport torch\n\ndummy = torch.randn(8,3,224,224)\n\nresnet   = benchmark(resnet18(),            dummy,\n                     metrics=(\"size\",\"speed\",\"compute\",\"energy\"))\nmobilenet= benchmark(mobilenet_v3_large(),  dummy,\n                     metrics=(\"size\",\"speed\",\"compute\",\"energy\"))\n\n/home/HubensN/miniconda3/envs/fasterai20/lib/python3.10/site-packages/torch/cuda/__init__.py:129: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 11040). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at ../c10/cuda/CUDAFunctions.cpp:108.)\n  return torch._C._cuda_getDeviceCount() &gt; 0\nNo CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'\n\n\n[INFO] Register count_convNd() for &lt;class 'torch.nn.modules.conv.Conv2d'&gt;.\n[INFO] Register count_normalization() for &lt;class 'torch.nn.modules.batchnorm.BatchNorm2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.activation.ReLU'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.pooling.MaxPool2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.container.Sequential'&gt;.\n[INFO] Register count_adap_avgpool() for &lt;class 'torch.nn.modules.pooling.AdaptiveAvgPool2d'&gt;.\n[INFO] Register count_linear() for &lt;class 'torch.nn.modules.linear.Linear'&gt;.\n\n\n[codecarbon INFO @ 13:54:03] offline tracker init\n[codecarbon WARNING @ 13:54:03] Multiple instances of codecarbon are allowed to run at the same time.\n[W430 13:54:29.057534160 NNPACK.cpp:61] Could not initialize NNPACK! Reason: Unsupported hardware.\n\n\n[INFO] Register count_convNd() for &lt;class 'torch.nn.modules.conv.Conv2d'&gt;.\n[INFO] Register count_normalization() for &lt;class 'torch.nn.modules.batchnorm.BatchNorm2d'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.activation.ReLU'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.container.Sequential'&gt;.\n[INFO] Register count_adap_avgpool() for &lt;class 'torch.nn.modules.pooling.AdaptiveAvgPool2d'&gt;.\n[INFO] Register count_linear() for &lt;class 'torch.nn.modules.linear.Linear'&gt;.\n[INFO] Register zero_ops() for &lt;class 'torch.nn.modules.dropout.Dropout'&gt;.\n\n\n\nfig = create_radar_plot([resnet, mobilenet],\n                        model_names=[\"ResNet-18\", \"MobileNet-V3\"])\nfig.show()",
+    "crumbs": [
+      "Tutorial"
+    ]
+  },
+  {
+    "objectID": "speed.html",
+    "href": "speed.html",
+    "title": "speed",
+    "section": "",
+    "text": "source\n\nsweep_latency\n\n sweep_latency (model:torch.nn.modules.module.Module,\n                shapes:Sequence[Sequence[int]],\n                device:str|torch.device='cuda', warmup:int=20,\n                steps:int=100)\n\nSweep different input shapes* on the same device. Useful for CNNs/ViTs where latency scales with resolution.*\n\nsource\n\n\nsweep_threads\n\n sweep_threads (model:torch.nn.modules.module.Module, sample:torch.Tensor,\n                thread_counts:Sequence[int]=(1, 2, 4, 8), warmup:int=20,\n                steps:int=100)\n\nReturn a pandas-compatible* list-of-dicts; each row contains latency stats for a different torch.set_num_threads(n).*\n\nsource\n\n\ncompute_speed_multi\n\n compute_speed_multi (model:torch.nn.modules.module.Module,\n                      sample:torch.Tensor,\n                      devices:Optional[Sequence[str|torch.device]]=None,\n                      **kwargs)\n\nConvenience wrapper: returns dict[str, SpeedMetrics] keyed by device. Defaults to both CPU and* CUDA if a GPU is available.*\n\nsource\n\n\ncompute_speed\n\n compute_speed (model:torch.nn.modules.module.Module, sample:torch.Tensor,\n                device:str|torch.device='cpu', warmup:int=20,\n                steps:int=100)\n\nMeasure latency/throughput on one* device. Returns a SpeedMetrics.*\n\nsource\n\n\nSpeedMetrics\n\n SpeedMetrics (p50_ms:float, p90_ms:float, p99_ms:float, mean_ms:float,\n               std_ms:float, throughput_s:float)",
+    "crumbs": [
+      "speed"
+    ]
+  }
+]
