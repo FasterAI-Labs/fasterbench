@@ -163,7 +163,7 @@ fig = create_radar_plot([resnet, mobilenet],
 fig.show()
 ```
 
-# ![](../imgs/newplot.png)
+![](nbs/imgs/newplot.png)
 
 ## Documentation
 
