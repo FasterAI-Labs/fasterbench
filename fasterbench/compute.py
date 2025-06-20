@@ -41,6 +41,14 @@ class ComputeMetrics:
 def compute_compute(model: nn.Module, dummy_input: torch.Tensor) -> ComputeMetrics:
     """Return **ComputeMetrics** for a single forward pass."""
 
+    try:
+        model_device = next(model.parameters()).device
+    except StopIteration:
+        model_device = torch.device("cpu")  # model has no parameters
+
+    if dummy_input.device != model_device:
+        dummy_input = dummy_input.to(model_device)
+
     params_m = round(
         sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6, 3
     )
