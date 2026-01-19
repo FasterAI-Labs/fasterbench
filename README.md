@@ -39,104 +39,151 @@ from fasterbench import benchmark
 
 # Load your model
 model = resnet18()
-
-# Create sample input
 dummy_input = torch.randn(1, 3, 224, 224)
 
 # Run comprehensive benchmarks
-results = benchmark(model, dummy_input)
+result = benchmark(model, dummy_input, metrics=["size", "speed", "compute"])
 
-# Print results
-for metric, value in results.items():
-    print(f"{metric}: {value}")
+# Typed access (IDE autocomplete!)
+print(f"Size: {result.size.size_mib:.2f} MiB")
+print(f"Params: {result.size.num_params:,}")
+print(f"CPU Latency: {result.speed['cpu'].mean_ms:.2f} ms")
+print(f"MACs: {result.compute.macs_m}M")
+
+# Backward-compatible dict access still works
+print(result["size_disk_bytes"])
 ```
 
 ## Features
 
-### All-in-one Benchmarking
+### BenchmarkResult: Typed Access + Backward Compatibility
 
-Get comprehensive metrics with a single function call:
+The
+[`benchmark()`](https://FasterAI-Labs.github.io/fasterbench/benchmark.html#benchmark)
+function returns a
+[`BenchmarkResult`](https://FasterAI-Labs.github.io/fasterbench/benchmark.html#benchmarkresult)
+object with both typed attribute access and dict-like access:
 
 ``` python
-# Measure all metrics
-results = benchmark(model, dummy_input)
+result = benchmark(model, dummy_input, metrics=["size", "speed", "compute"])
 
-# Or select specific metrics
-results = benchmark(model, dummy_input, metrics=["size", "speed"])
+# Typed access - IDE autocomplete and type checking
+result.size.size_mib          # 44.59
+result.size.num_params        # 11689512
+result.speed["cpu"].mean_ms   # 45.23
+result.speed["cpu"].throughput_s  # 22.1
+result.compute.macs_m         # 1819.066
+result.compute.macs_available # True (False if MACs couldn't be computed)
+
+# Dict access - backward compatible with existing code
+result["size_size_mib"]       # 44.59
+result["speed_cpu_mean_ms"]   # 45.23
+for key, value in result.items():
+    print(f"{key}: {value}")
 ```
 
-### Size Metrics
+### Human-Readable Summary
 
-Evaluate model size characteristics:
+Get a quick overview with formatted output:
 
 ``` python
-from fasterbench import compute_size
-
-size_metrics = compute_size(model)
-print(f"Disk Size: {size_metrics.size_mib:.2f} MiB")
-print(f"Parameters: {size_metrics.num_params:,}")
+result.summary()  # prints directly
 ```
 
-### Speed Metrics
+    ═══ Size ════════════════════════════════════
+      Disk:   44.59 MiB
+      Params: 11.69M
+    ═══ Speed ═══════════════════════════════════
+      cpu: 45.23 ms  │  22.1 inf/s  │  p99: 48.12 ms
+    ═══ Compute ═════════════════════════════════
+      MACs:   1819.1 M
+      Params: 11.69 M
 
-Measure inference performance across devices:
+### Export to DataFrame or JSON
 
 ``` python
-from fasterbench import compute_speed_multi
+# Convert to pandas DataFrame for analysis
+df = result.to_dataframe()
+df.to_csv("benchmark_results.csv")
 
-speed_metrics = compute_speed_multi(model, dummy_input)
-for device, metrics in speed_metrics.items():
-    print(f"{device} latency (P50): {metrics.p50_ms:.2f} ms")
-    print(f"{device} throughput: {metrics.throughput_s:.2f} inferences/sec")
+# Serialize to JSON
+json_str = result.to_json()
+
+# Get formatted string (for logging, etc.)
+summary_str = str(result)
 ```
 
-### Compute Metrics
+### Selective Metrics
 
-Quantify computational complexity:
+Only compute what you need:
 
 ``` python
-from fasterbench import compute_compute
+# Fast: just size and compute (no inference runs)
+result = benchmark(model, dummy_input, metrics=["size", "compute"])
 
-compute_metrics = compute_compute(model, dummy_input)
-print(f"MACs: {compute_metrics.macs_m} million")
+# Full benchmark on specific devices
+result = benchmark(model, dummy_input, 
+                   speed_devices=["cpu", "cuda"],
+                   memory_devices=["cuda"])
+```
+
+### Individual Metric Functions
+
+For fine-grained control, use the individual compute functions:
+
+``` python
+from fasterbench import compute_size, compute_speed_multi, compute_compute
+
+# Size metrics
+size = compute_size(model)
+print(f"Disk Size: {size.size_mib:.2f} MiB")
+print(f"Parameters: {size.num_params:,}")
+
+# Speed metrics across devices
+speed = compute_speed_multi(model, dummy_input)
+for device, metrics in speed.items():
+    print(f"{device}: {metrics.mean_ms:.2f}ms, {metrics.throughput_s:.1f} inf/s")
+
+# Compute metrics (MACs)
+compute = compute_compute(model, dummy_input)
+if compute.macs_available:
+    print(f"MACs: {compute.macs_m}M")
 ```
 
 ### Memory Metrics
 
-Profile memory usage:
+Profile memory usage on CPU and GPU:
 
 ``` python
 from fasterbench import compute_memory_multi
 
-memory_metrics = compute_memory_multi(model, dummy_input)
-for device, metrics in memory_metrics.items():
-    print(f"{device} peak memory: {metrics.peak_mib:.2f} MiB")
+memory = compute_memory_multi(model, dummy_input)
+for device, metrics in memory.items():
+    print(f"{device} peak: {metrics.peak_mib:.2f} MiB")
 ```
 
 ### Energy Metrics
 
-Measure environmental impact:
+Measure power consumption and carbon footprint (requires `codecarbon`):
 
 ``` python
 from fasterbench import compute_energy_multi
 
-# Requires codecarbon package
-energy_metrics = compute_energy_multi(model, dummy_input)
-for device, metrics in energy_metrics.items():
-    print(f"{device} power usage: {metrics.mean_watts:.2f} W")
-    print(f"{device} CO2: {metrics.co2_eq_g:.6f} g CO₂-eq per inference")
+energy = compute_energy_multi(model, dummy_input)
+for device, metrics in energy.items():
+    print(f"{device}: {metrics.mean_watts:.1f}W, {metrics.co2_eq_g:.4f}g CO₂/inf")
 ```
 
-### Thread Count Optimization
+### Thread Sweep for CPU Optimization
 
-Find the optimal number of CPU threads:
+Find the optimal thread count for CPU inference:
 
 ``` python
 from fasterbench import sweep_threads
 
-thread_results = sweep_threads(model, dummy_input, thread_counts=[1, 2, 4, 8, 16])
-for result in thread_results:
-    print(f"Threads: {result['threads']}, Latency: {result['mean_ms']:.2f} ms")
+results = sweep_threads(model, dummy_input, thread_counts=[1, 2, 4, 8])
+for r in results:
+    print(f"{r['threads']} threads: {r['mean_ms']:.2f}ms")
 ```
 
 ### Visualize Results
