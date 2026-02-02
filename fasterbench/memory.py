@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Sequence
-from .core import _bytes_to_mib
+from typing import Sequence
+from .core import _bytes_to_mib, _run_on_devices
 
 import numpy as np
 import torch
@@ -30,31 +30,38 @@ class MemoryMetrics:
     reserved_mib: float  # GPU-only (NaN for CPU)
     device: str
 
-    def as_dict(self) -> Dict[str, float | str]:
+    def as_dict(self) -> dict[str, float | str]:
         return asdict(self)
 
 
 #| export
+def _nan_memory_metrics(device: str) -> MemoryMetrics:  # device string
+    """Create MemoryMetrics with NaN values for failed benchmarks."""
+    nan = float("nan")
+    return MemoryMetrics(nan, nan, nan, device)
+
+
+#| export
 def _gpu_metrics(
-    model: torch.nn.Module,       # model to benchmark
-    dummy_input: torch.Tensor,    # input tensor (with batch dimension)
+    model: torch.nn.Module,    # model to benchmark
+    sample: torch.Tensor,      # input tensor (with batch dimension)
     *,
-    warmup: int,                  # warmup iterations
-    steps: int,                   # measurement iterations
+    warmup: int,               # warmup iterations
+    steps: int,                # measurement iterations
 ) -> MemoryMetrics:
     """Measure GPU memory usage."""
     dev = torch.device("cuda")
     model = model.eval().to(dev)
-    dummy_input = dummy_input.to(dev)
+    sample = sample.to(dev)
 
     for _ in range(warmup):
-        model(dummy_input)
+        model(sample)
     torch.cuda.synchronize(dev)
 
     alloc, alloc_peak, reserv_peak = [], [], []
     for _ in range(steps):
         torch.cuda.reset_peak_memory_stats(dev)
-        model(dummy_input)
+        model(sample)
         torch.cuda.synchronize(dev)
         alloc.append(torch.cuda.memory_allocated(dev))
         alloc_peak.append(torch.cuda.max_memory_allocated(dev))
@@ -70,32 +77,31 @@ def _gpu_metrics(
 
 #| export
 def _cpu_metrics(
-    model: torch.nn.Module,       # model to benchmark
-    dummy_input: torch.Tensor,    # input tensor (with batch dimension)
+    model: torch.nn.Module,    # model to benchmark
+    sample: torch.Tensor,      # input tensor (with batch dimension)
     *,
-    warmup: int,                  # warmup iterations
-    steps: int,                   # measurement iterations
+    warmup: int,               # warmup iterations
+    steps: int,                # measurement iterations
 ) -> MemoryMetrics:
     """Measure CPU memory usage via psutil."""
     if psutil is None:
         warnings.warn("psutil not available – returning NaNs for CPU memory")
-        nan = float("nan")
-        return MemoryMetrics(nan, nan, nan, "cpu")
+        return _nan_memory_metrics("cpu")
 
     proc = psutil.Process()
     model = model.eval().cpu()
-    dummy_input = dummy_input.cpu()
+    sample = sample.cpu()
 
     rss0 = proc.memory_info().rss
 
     for _ in range(warmup):
-        model(dummy_input)
+        model(sample)
 
-    diffs: List[int] = []
-    peaks: List[int] = []
+    diffs: list[int] = []
+    peaks: list[int] = []
     for _ in range(steps):
         rss_before = proc.memory_info().rss
-        model(dummy_input)
+        model(sample)
         rss_after = proc.memory_info().rss
         diffs.append(max(0, rss_after - rss_before))
         peaks.append(max(0, rss_after - rss0))
@@ -110,49 +116,37 @@ def _cpu_metrics(
 
 #| export
 def compute_memory(
-    model: torch.nn.Module,       # model to benchmark
-    dummy_input: torch.Tensor,    # input tensor (with batch dimension)
+    model: torch.nn.Module,                  # model to benchmark
+    sample: torch.Tensor,                    # input tensor (with batch dimension)
     *,
-    warmup: int = 10,             # warmup iterations
-    steps: int = 100,             # measurement iterations
+    device: str | torch.device = "cpu",      # device to run on
+    warmup: int = 10,                        # warmup iterations
+    steps: int = 100,                        # measurement iterations
 ) -> MemoryMetrics:
-    """Measure memory on GPU if available, else CPU."""
-    if torch.cuda.is_available():
-        return _gpu_metrics(model, dummy_input, warmup=warmup, steps=steps)
-    return _cpu_metrics(model, dummy_input, warmup=warmup, steps=steps)
+    """Measure memory usage on specified device."""
+    device_str = str(device)
+    if device_str == "cuda" or (device_str == "auto" and torch.cuda.is_available()):
+        if not torch.cuda.is_available():
+            warnings.warn("CUDA requested but not available – falling back to CPU")
+            return _cpu_metrics(model, sample, warmup=warmup, steps=steps)
+        return _gpu_metrics(model, sample, warmup=warmup, steps=steps)
+    return _cpu_metrics(model, sample, warmup=warmup, steps=steps)
 
 
 #| export
 def compute_memory_multi(
     model: torch.nn.Module,                                # model to benchmark
-    dummy_input: torch.Tensor,                             # input tensor (with batch dimension)
+    sample: torch.Tensor,                                  # input tensor (with batch dimension)
     *,
     devices: Sequence[str | torch.device] | None = None,   # devices to benchmark (default: cpu + cuda)
     warmup: int = 10,                                      # warmup iterations
     steps: int = 100,                                      # measurement iterations
-) -> Dict[str, MemoryMetrics]:
+) -> dict[str, MemoryMetrics]:
     """Measure memory on multiple devices."""
-    if devices is None:
-        devices = ["cpu"]
-        if torch.cuda.is_available():
-            devices.append("cuda")
-
-    nan_metrics = lambda dev: MemoryMetrics(float("nan"), float("nan"), float("nan"), dev)
-    
-    metrics: Dict[str, MemoryMetrics] = {}
-    for d in devices:
-        d_str = str(d)
-        try:
-            if d == "cuda" and not torch.cuda.is_available():
-                continue
-            if d == "cuda":
-                metrics[d_str] = _gpu_metrics(model, dummy_input, warmup=warmup, steps=steps)
-            else:
-                metrics[d_str] = _cpu_metrics(model, dummy_input, warmup=warmup, steps=steps)
-        except (RuntimeError, torch.cuda.OutOfMemoryError) as e:
-            warnings.warn(f"Memory benchmark failed on {d}: {e}")
-            metrics[d_str] = nan_metrics(d_str)
-        except Exception as e:
-            warnings.warn(f"Unexpected error during memory benchmark on {d}: {e}")
-            metrics[d_str] = nan_metrics(d_str)
-    return metrics
+    return _run_on_devices(
+        compute_memory, model, sample, devices,
+        nan_factory=_nan_memory_metrics,
+        metric_name="Memory",
+        warmup=warmup,
+        steps=steps,
+    )

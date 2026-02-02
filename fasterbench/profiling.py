@@ -7,16 +7,16 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import Dict, List, Sequence
+from typing import Sequence
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from .core import _device_ctx
+from .core import _device_ctx, _fmt_table, _fmt_float, _fmt_macs
 
 # %% auto #0
-__all__ = ['profile_layers', 'LayerProfiler']
+__all__ = ['LayerProfiler']
 
 # %% ../nbs/08_profiling.ipynb #helpers
 def _tensor_bytes(t: torch.Tensor) -> int:  # tensor to measure
@@ -34,109 +34,237 @@ def _output_bytes(output) -> int:  # layer output (tensor, tuple, list, or dict)
         return sum(_output_bytes(v) for v in output.values())
     return 0
 
-# %% ../nbs/08_profiling.ipynb #profile_layers
-@torch.inference_mode()
-def profile_layers(
-    model: nn.Module,             # model to profile
-    sample: torch.Tensor,         # input tensor (with batch dimension)
-    *,
-    device: str | torch.device = "cpu",  # device to run profiling on
-    warmup: int = 5,              # warmup iterations before measurement
-    steps: int = 20,              # measurement iterations
-) -> List[Dict]:
-    """Profile per-layer latency by wrapping each leaf module's forward method.
+
+#| export
+def _setup_size_hooks(
+    leaf_modules: dict[str, nn.Module],  # {name: module} for leaf modules
+    measurements: dict[str, list],        # {name: []} to store param counts
+    device_type: str | None = None,       # unused, for consistent signature
+) -> list:
+    """Compute parameter counts directly - no actual hooks needed."""
+    for name, module in leaf_modules.items():
+        params = sum(p.numel() for p in module.parameters(recurse=False))
+        measurements[name].append(params)
+    return []  # No handles to remove
+
+
+#| export
+def _setup_speed_hooks(
+    leaf_modules: dict[str, nn.Module],  # {name: module} for leaf modules
+    measurements: dict[str, list],        # {name: []} to store timing measurements (ms)
+    device_type: str | None = None,       # "cuda" or "cpu"
+) -> list:
+    """Create pre+post forward hooks for timing each layer."""
+    handles = []
     
-    Returns list of dicts with: name, type, time_ms, percent (sorted slowest first).
+    def make_cuda_hooks(layer_name: str):
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+        def pre_hook(mod, inp):
+            start.record()
+        def post_hook(mod, inp, output):
+            end.record()
+            torch.cuda.synchronize()
+            measurements[layer_name].append(start.elapsed_time(end))
+        return pre_hook, post_hook
+    
+    def make_cpu_hooks(layer_name: str):
+        state = {}
+        def pre_hook(mod, inp):
+            state['start'] = time.perf_counter() * 1000
+        def post_hook(mod, inp, output):
+            measurements[layer_name].append(time.perf_counter() * 1000 - state['start'])
+        return pre_hook, post_hook
+    
+    make_hooks = make_cuda_hooks if device_type == "cuda" else make_cpu_hooks
+    
+    for name, module in leaf_modules.items():
+        pre_hook, post_hook = make_hooks(name)
+        handles.append(module.register_forward_pre_hook(pre_hook))
+        handles.append(module.register_forward_hook(post_hook))
+    
+    return handles
+
+
+#| export
+def _setup_memory_hooks(
+    leaf_modules: dict[str, nn.Module],  # {name: module} for leaf modules
+    measurements: dict[str, list],        # {name: []} to store memory measurements (MiB)
+    device_type: str | None = None,       # unused, for consistent signature
+) -> list:
+    """Create forward hooks to measure output tensor size per layer (in MiB)."""
+    handles = []
+    for name, module in leaf_modules.items():
+        def make_hook(layer_name: str):
+            def hook(mod, inp, output):
+                mib = _output_bytes(output) / (1024 * 1024)
+                measurements[layer_name].append(mib)
+            return hook
+        handles.append(module.register_forward_hook(make_hook(name)))
+    return handles
+
+
+#| export
+def _setup_compute_hooks(
+    leaf_modules: dict[str, nn.Module],  # {name: module} for leaf modules
+    measurements: dict[str, list],        # {name: []} to store MAC measurements
+    device_type: str | None = None,       # unused, for consistent signature
+) -> list | None:
+    """Create forward hooks to count MACs per layer using torchprofile."""
+    try:
+        from torchprofile.handlers import handlers
+    except ImportError:
+        warnings.warn("torchprofile not installed. pip install torchprofile")
+        return None
+    
+    hook_handles = []
+    for name, module in leaf_modules.items():
+        handler = handlers.get(type(module))
+        if handler:
+            def make_hook(layer_name: str, handler_fn):
+                def hook(mod, inp, output):
+                    try:
+                        macs = handler_fn(mod, inp, output)
+                        if macs is not None:
+                            measurements[layer_name].append(macs)
+                    except:
+                        pass
+                return hook
+            hook_handles.append(module.register_forward_hook(make_hook(name, handler)))
+    return hook_handles
+
+
+#| export
+_METRIC_CONFIG = {
+    "size": {"col": "params", "needs_inference": False, "aggregate": "sum"},
+    "speed": {"col": "time_ms", "needs_inference": True, "aggregate": "mean"},
+    "memory": {"col": "memory_mib", "needs_inference": True, "aggregate": "mean"},
+    "compute": {"col": "macs", "needs_inference": True, "aggregate": "sum", "single_pass": True},
+}
+
+_HOOK_SETUP = {
+    "size": _setup_size_hooks,
+    "speed": _setup_speed_hooks,
+    "memory": _setup_memory_hooks,
+    "compute": _setup_compute_hooks,
+}
+
+
+@torch.inference_mode()
+def _profile_layers(
+    model: nn.Module,              # model to profile
+    sample: torch.Tensor,          # input tensor (with batch dimension)
+    *,
+    device: str | torch.device,    # device to run profiling on
+    metric: str,                   # "size", "speed", "memory", or "compute"
+    warmup: int = 5,               # warmup iterations
+    steps: int = 20,               # measurement iterations
+) -> list[dict]:
+    """Generic per-layer profiling using forward hooks.
+    
+    Returns list of dicts with: name, type, value, percent (sorted by value descending).
     """
+    if metric not in _METRIC_CONFIG:
+        raise ValueError(f"Invalid metric: {metric}. Valid: {list(_METRIC_CONFIG.keys())}")
+    
+    config = _METRIC_CONFIG[metric]
+    col = config["col"]
+    
     with _device_ctx(device) as dev:
         model = model.eval().to(dev)
         sample = sample.to(dev)
         
-        layer_times: Dict[str, List[float]] = {}
-        original_forwards = {}
+        # Get leaf modules
+        leaf_modules = {
+            name: module
+            for name, module in model.named_modules()
+            if len(list(module.children())) == 0 and name
+        }
         
-        # Wrap each leaf module's forward with timing
-        for name, module in model.named_modules():
-            if len(list(module.children())) == 0 and name:
-                original_forwards[name] = module.forward
-                layer_times[name] = []
-                
-                def make_timed_forward(orig_forward, layer_name, device_type):
-                    if device_type == "cuda":
-                        def timed_forward(*args, **kwargs):
-                            start = torch.cuda.Event(enable_timing=True)
-                            end = torch.cuda.Event(enable_timing=True)
-                            start.record()
-                            result = orig_forward(*args, **kwargs)
-                            end.record()
-                            torch.cuda.synchronize()
-                            layer_times[layer_name].append(start.elapsed_time(end))
-                            return result
-                        return timed_forward
-                    else:
-                        def timed_forward(*args, **kwargs):
-                            t0 = time.perf_counter()
-                            result = orig_forward(*args, **kwargs)
-                            layer_times[layer_name].append((time.perf_counter() - t0) * 1000)
-                            return result
-                        return timed_forward
-                
-                module.forward = make_timed_forward(module.forward, name, dev.type)
+        measurements: dict[str, list] = {name: [] for name in leaf_modules}
+        
+        # Setup metric-specific hooks (all have same signature now)
+        handles = _HOOK_SETUP[metric](leaf_modules, measurements, dev.type)
+        if handles is None:  # e.g., torchprofile not available
+            return []
         
         try:
-            # Warmup
-            for _ in range(warmup):
-                model(sample)
-                for name in layer_times:
-                    layer_times[name].clear()
-            
-            # Measurement
-            for _ in range(steps):
-                model(sample)
+            # Run inference if needed
+            if config["needs_inference"]:
+                # Warmup (skip for single-pass metrics like compute)
+                if not config.get("single_pass", False):
+                    for _ in range(warmup):
+                        model(sample)
+                        for name in measurements:
+                            measurements[name].clear()
+                
+                # Measurement
+                num_steps = 1 if config.get("single_pass", False) else steps
+                for _ in range(num_steps):
+                    model(sample)
             
             # Aggregate results
             results = []
-            total_time = 0.0
-            for name, module in model.named_modules():
-                if name in layer_times and layer_times[name]:
-                    mean_time = np.mean(layer_times[name])
-                    total_time += mean_time
-                    results.append({
-                        "name": name,
-                        "type": module.__class__.__name__,
-                        "time_ms": mean_time,
-                    })
+            total = 0.0
             
+            for name, module in leaf_modules.items():
+                if measurements[name]:
+                    if config["aggregate"] == "mean":
+                        value = float(np.mean(measurements[name]))
+                    else:  # sum
+                        value = float(sum(measurements[name]))
+                else:
+                    value = 0.0
+                
+                total += value
+                results.append({
+                    "name": name,
+                    "type": module.__class__.__name__,
+                    col: value,
+                })
+            
+            # Add percentages
             for r in results:
-                r["percent"] = (r["time_ms"] / total_time * 100) if total_time > 0 else 0
+                r["percent"] = (r[col] / total * 100) if total > 0 else 0.0
             
-            results.sort(key=lambda x: x["time_ms"], reverse=True)
+            # Sort by value descending
+            results.sort(key=lambda x: x[col], reverse=True)
             return results
-            
+        
         finally:
-            for name, module in model.named_modules():
-                if name in original_forwards:
-                    module.forward = original_forwards[name]
+            for h in handles:
+                h.remove()
 
 # %% ../nbs/08_profiling.ipynb #layer_profiler
 class LayerProfiler:
-    """Unified per-layer profiler for multiple metrics (speed, memory, size, compute).
-    
-    Example:
-        profiler = LayerProfiler(model, dummy_input)
-        profiler.profile(["speed", "memory", "size"], device="cuda")
-        profiler.summary(top=5)
-        slowest = profiler.top("speed", n=10)
-    """
+    """Unified per-layer profiler for multiple metrics (speed, memory, size, compute)."""
     
     VALID_METRICS = frozenset({"speed", "memory", "size", "compute"})
-    
-    # Maps metric names to their data column and display format
-    _METRIC_INFO = {
-        "speed": {"col": "speed_ms", "pct": "speed_percent", "unit": "ms", "label": "Speed (slowest)"},
-        "size": {"col": "params", "pct": "params_percent", "unit": "", "label": "Parameters (largest)"},
-        "memory": {"col": "memory_mib", "pct": "memory_percent", "unit": "MiB", "label": "Memory (largest)"},
-        "compute": {"col": "macs", "pct": "macs_percent", "unit": "", "label": "MACs (most)"},
+    _CONFIG = {
+        "speed": {
+            "col": "speed_ms", "pct": "speed_percent", "unit": "ms",
+            "label": "Speed (slowest)",
+            "src_col": "time_ms",
+            "format": _fmt_float,
+        },
+        "memory": {
+            "col": "memory_mib", "pct": "memory_percent", "unit": "MiB",
+            "label": "Memory (largest)",
+            "src_col": "memory_mib",
+            "format": _fmt_float,
+        },
+        "size": {
+            "col": "params", "pct": "params_percent", "unit": "",
+            "label": "Parameters (largest)",
+            "src_col": "params",
+            "format": _fmt_table,
+        },
+        "compute": {
+            "col": "macs", "pct": "macs_percent", "unit": "",
+            "label": "MACs (most)",
+            "src_col": "macs",
+            "format": _fmt_macs,
+        },
     }
     
     def __init__(
@@ -151,8 +279,8 @@ class LayerProfiler:
             for name, module in model.named_modules() 
             if len(list(module.children())) == 0 and name
         }
-        self._results: List[Dict] = []
-        self._profiled_metrics: List[str] = []
+        self._results: list[dict] = []
+        self._profiled_metrics: list[str] = []
     
     def profile(
         self,
@@ -161,7 +289,7 @@ class LayerProfiler:
         device: str | torch.device = "cpu",      # device for speed/memory profiling
         warmup: int = 5,                         # warmup iterations
         steps: int = 20,                         # measurement iterations
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Profile specified metrics for each layer, returns list of dicts."""
         if isinstance(metrics, str):
             metrics = [metrics]
@@ -171,25 +299,32 @@ class LayerProfiler:
         if invalid:
             raise ValueError(f"Invalid metrics: {invalid}. Valid: {self.VALID_METRICS}")
         
-        results: Dict[str, Dict] = {
+        # Initialize results dict for each leaf module
+        results: dict[str, dict] = {
             name: {"name": name, "type": mod.__class__.__name__}
             for name, mod in self._leaf_modules.items()
         }
         
-        if "size" in metrics:
-            self._profile_size(results)
-        if "speed" in metrics:
-            self._profile_speed(results, device, warmup, steps)
-        if "memory" in metrics:
-            self._profile_memory(results, device, warmup, steps)
-        if "compute" in metrics:
-            self._profile_compute(results, device)
+        # Profile each metric using unified _profile_layers
+        for metric in metrics:
+            cfg = self._CONFIG[metric]
+            profile_data = _profile_layers(
+                self.model, self.sample,
+                device=device, metric=metric, warmup=warmup, steps=steps
+            )
+            
+            # Merge results
+            for r in profile_data:
+                name = r["name"]
+                if name in results:
+                    results[name][cfg["col"]] = r[cfg["src_col"]]
+                    results[name][cfg["pct"]] = r["percent"]
         
         out = list(results.values())
         
         # Sort by first metric
-        sort_key = self._METRIC_INFO.get(metrics[0], {}).get("col", "speed_ms")
-        out.sort(key=lambda x: x.get(sort_key, 0) or 0, reverse=True)
+        sort_col = self._CONFIG[metrics[0]]["col"]
+        out.sort(key=lambda x: x.get(sort_col, 0) or 0, reverse=True)
         
         # Store for top() and summary()
         self._results = out
@@ -201,16 +336,17 @@ class LayerProfiler:
         self,
         metric: str,              # metric to sort by: speed, memory, size, compute
         n: int = 5,               # number of layers to return
+        *,
         ascending: bool = False,  # if True, return smallest/fastest instead of largest/slowest
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Get top N layers sorted by the specified metric."""
         if not self._results:
             raise RuntimeError("No results available. Call profile() first.")
         
-        if metric not in self._METRIC_INFO:
-            raise ValueError(f"Invalid metric: {metric}. Valid: {list(self._METRIC_INFO.keys())}")
+        if metric not in self._CONFIG:
+            raise ValueError(f"Invalid metric: {metric}. Valid: {list(self._CONFIG.keys())}")
         
-        col = self._METRIC_INFO[metric]["col"]
+        col = self._CONFIG[metric]["col"]
         
         # Check if metric was profiled
         if col not in self._results[0]:
@@ -223,24 +359,20 @@ class LayerProfiler:
         )
         return sorted_results[:n]
     
-    def summary(
-        self,
-        top: int = 5,  # number of top layers to show per metric
-    ) -> None:
+    def summary(self, *, top: int = 5) -> None:
         """Print a formatted summary of top layers for each profiled metric."""
         if not self._results:
             raise RuntimeError("No results available. Call profile() first.")
         
         for metric in self._profiled_metrics:
-            info = self._METRIC_INFO[metric]
-            col, pct_col, unit = info["col"], info["pct"], info["unit"]
-            label = info["label"]
+            cfg = self._CONFIG[metric]
+            col, pct_col = cfg["col"], cfg["pct"]
             
             # Check if metric data exists
             if col not in self._results[0]:
                 continue
             
-            print(f"═══ {label} {'═' * (50 - len(label))}")
+            print(f"═══ {cfg['label']} {'═' * (50 - len(cfg['label']))}")
             
             sorted_layers = sorted(
                 self._results,
@@ -251,142 +383,8 @@ class LayerProfiler:
             for r in sorted_layers:
                 val = r.get(col, 0) or 0
                 pct = r.get(pct_col, 0) or 0
-                name = r["name"]
-                layer_type = r["type"]
-                
-                # Format value based on metric type
-                if metric == "speed":
-                    val_str = f"{val:8.3f} {unit}"
-                elif metric == "size":
-                    val_str = f"{val:>12,}"
-                elif metric == "memory":
-                    val_str = f"{val:8.3f} {unit}"
-                elif metric == "compute":
-                    if val >= 1e6:
-                        val_str = f"{val/1e6:8.2f} M"
-                    elif val >= 1e3:
-                        val_str = f"{val/1e3:8.2f} K"
-                    else:
-                        val_str = f"{val:>10}"
-                else:
-                    val_str = f"{val}"
-                
-                print(f"  {name:40} {layer_type:15} {val_str} ({pct:5.1f}%)")
+                val_str = cfg["format"](val)
+                if cfg["unit"]:
+                    val_str += f" {cfg['unit']}"
+                print(f"  {r['name']:40} {r['type']:15} {val_str} ({pct:5.1f}%)")
             print()
-    
-    def _profile_size(self, results: Dict[str, Dict]) -> None:
-        """Add parameter count per layer."""
-        total_params = 0
-        for name, module in self._leaf_modules.items():
-            params = sum(p.numel() for p in module.parameters(recurse=False))
-            results[name]["params"] = params
-            total_params += params
-        
-        for name in self._leaf_modules:
-            results[name]["params_percent"] = (
-                results[name]["params"] / total_params * 100 if total_params > 0 else 0
-            )
-    
-    @torch.inference_mode()
-    def _profile_speed(self, results: Dict[str, Dict], device, warmup, steps) -> None:
-        """Add timing per layer."""
-        speed_results = profile_layers(self.model, self.sample, device=device, warmup=warmup, steps=steps)
-        for r in speed_results:
-            if r["name"] in results:
-                results[r["name"]]["speed_ms"] = r["time_ms"]
-                results[r["name"]]["speed_percent"] = r["percent"]
-    
-    @torch.inference_mode()
-    def _profile_memory(self, results: Dict[str, Dict], device, warmup, steps) -> None:
-        """Add output tensor size per layer (activation memory footprint)."""
-        dev = torch.device(device)
-        model = self.model.eval().to(dev)
-        sample = self.sample.to(dev)
-        
-        memory_deltas: Dict[str, List[float]] = {name: [] for name in self._leaf_modules}
-        
-        def make_memory_hook(layer_name: str):
-            def hook(module, input, output):
-                memory_deltas[layer_name].append(_output_bytes(output))
-            return hook
-        
-        handles = []
-        for name, module in self._leaf_modules.items():
-            handles.append(module.register_forward_hook(make_memory_hook(name)))
-        
-        try:
-            for _ in range(warmup):
-                model(sample)
-                for name in memory_deltas:
-                    memory_deltas[name].clear()
-            
-            for _ in range(steps):
-                model(sample)
-            
-            total_memory = 0.0
-            for name in self._leaf_modules:
-                if memory_deltas[name]:
-                    mean_bytes = np.mean(memory_deltas[name])
-                    results[name]["memory_mib"] = mean_bytes / (1024 * 1024)
-                    total_memory += mean_bytes
-                else:
-                    results[name]["memory_mib"] = 0.0
-            
-            for name in self._leaf_modules:
-                results[name]["memory_percent"] = (
-                    results[name]["memory_mib"] / (total_memory / (1024 * 1024)) * 100
-                    if total_memory > 0 else 0
-                )
-        finally:
-            for h in handles:
-                h.remove()
-    
-    def _profile_compute(self, results: Dict[str, Dict], device) -> None:
-        """Add MACs per layer using torchprofile."""
-        try:
-            from torchprofile.handlers import handlers
-        except ImportError:
-            warnings.warn("torchprofile not installed. pip install torchprofile")
-            for name in self._leaf_modules:
-                results[name]["macs"] = None
-            return
-        
-        dev = torch.device(device)
-        model = self.model.eval().to(dev)
-        sample = self.sample.to(dev)
-        
-        try:
-            layer_macs: Dict[str, int] = {name: 0 for name in self._leaf_modules}
-            
-            def make_mac_hook(layer_name: str, handler_fn):
-                def hook(module, input, output):
-                    try:
-                        macs = handler_fn(module, input, output)
-                        if macs is not None:
-                            layer_macs[layer_name] += macs
-                    except:
-                        pass
-                return hook
-            
-            handles = []
-            for name, module in self._leaf_modules.items():
-                handler = handlers.get(type(module))
-                if handler:
-                    handles.append(module.register_forward_hook(make_mac_hook(name, handler)))
-            
-            try:
-                model(sample)
-            finally:
-                for h in handles:
-                    h.remove()
-            
-            total_macs = sum(layer_macs.values())
-            for name in self._leaf_modules:
-                results[name]["macs"] = layer_macs[name]
-                results[name]["macs_percent"] = (
-                    layer_macs[name] / total_macs * 100 if total_macs > 0 else 0
-                )
-        except Exception as e:
-            warnings.warn(f"Could not profile MACs: {e}")
-            for name in self._leaf_modules:
-                results[name]["macs"] = None

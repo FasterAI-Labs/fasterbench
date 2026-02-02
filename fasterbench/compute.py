@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Dict, Optional, Any
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -28,57 +28,48 @@ __all__ = ['ComputeMetrics', 'compute_compute']
 # %% ../nbs/03_compute.ipynb #09401efb
 @dataclass(slots=True)
 class ComputeMetrics:
-    """MACs (millions) and parameter count (millions)."""
-    macs_m: Optional[float]  # None if unavailable
-    params_m: float
+    """MACs (Multiply-Accumulate operations) in millions."""
+    macs_m: float | None  # None if unavailable
 
     @property
     def macs_available(self) -> bool:
         """Check if MACs measurement succeeded."""
         return self.macs_m is not None
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, float]:
         return {
             "macs_m": self.macs_m if self.macs_m is not None else float("nan"),
-            "params_m": self.params_m,
         }
 
 
 #| export
 def compute_compute(
-    model: nn.Module,                        # model to analyze
-    dummy_input: torch.Tensor,               # input tensor (with batch dimension)
-    *,
-    params_count: Optional[int] = None,      # pre-computed parameter count (avoids recount)
+    model: nn.Module,        # model to analyze
+    sample: torch.Tensor,    # input tensor (with batch dimension)
 ) -> ComputeMetrics:
-    """Compute MACs and parameter count for a single forward pass."""
+    """Compute MACs for a single forward pass."""
     try:
         model_device = next(model.parameters()).device
     except StopIteration:
         model_device = torch.device("cpu")
 
-    if dummy_input.device != model_device:
-        dummy_input = dummy_input.to(model_device)
+    if sample.device != model_device:
+        sample = sample.to(model_device)
 
-    if params_count is not None:
-        params_m = round(params_count / 1e6, 3)
-    else:
-        params_m = round(sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6, 3)
-
-    macs_m: Optional[float] = None
+    macs_m: float | None = None
 
     if _thop_profile is not None:
         try:
-            mac_raw, _ = _thop_profile(model, inputs=(dummy_input,))
+            mac_raw, _ = _thop_profile(model, inputs=(sample,))
             macs_m = round(mac_raw / 1e6, 3)
         except Exception as e:
             warnings.warn(f"thop failed: {e}")
     elif _profile_macs is not None:
         try:
-            macs_m = round(_profile_macs(model, dummy_input) / 1e6, 3)
+            macs_m = round(_profile_macs(model, sample) / 1e6, 3)
         except Exception as e:
             warnings.warn(f"torchprofile failed: {e}")
     else:
         warnings.warn("No MAC-counting backend available – skipping MACs")
 
-    return ComputeMetrics(macs_m=macs_m, params_m=params_m)
+    return ComputeMetrics(macs_m=macs_m)

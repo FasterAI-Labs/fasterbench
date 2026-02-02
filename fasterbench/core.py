@@ -16,7 +16,35 @@ def _bytes_to_mib(n: int) -> float:  # number of bytes to convert
     """Convert bytes to MiB (base-2)."""
     return n / 1024 ** 2
 
-#| export
+def _fmt_human(n: int | float) -> str:  # number to format
+    """Format large number with K/M/B suffix for human-readable output."""
+    if n >= 1e9: return f"{n/1e9:.2f}B"
+    if n >= 1e6: return f"{n/1e6:.2f}M"
+    if n >= 1e3: return f"{n/1e3:.2f}K"
+    return str(int(n))
+
+
+def _fmt_table(n: int | float) -> str:  # number to format
+    """Format number with commas for tabular output."""
+    return f"{int(n):>12,}"
+
+
+def _fmt_float(v: float, width: int = 8, decimals: int = 3) -> str:  # value, width, decimal places
+    """Format float with specified width and decimal places."""
+    return f"{v:{width}.{decimals}f}"
+
+
+def _fmt_macs(v: float) -> str:  # MACs value to format
+    """Format MACs with appropriate M/K suffix."""
+    if v >= 1e6: return f"{v/1e6:8.2f} M"
+    if v >= 1e3: return f"{v/1e3:8.2f} K"
+    return f"{int(v):>10}"
+
+
+def _section(title: str, width: int = 40) -> str:  # section title, total width
+    """Create a section header with box-drawing characters."""
+    return f"═══ {title} " + "═" * (width - len(title))
+
 def _validate_benchmark_params(
     warmup: int,  # warmup iterations (must be >= 0)
     steps: int,   # measurement iterations (must be >= 1)
@@ -27,7 +55,6 @@ def _validate_benchmark_params(
     if steps < 1:
         raise ValueError(f"steps must be at least 1, got {steps}")
 
-#| export
 @contextlib.contextmanager
 def _device_ctx(dev: str | torch.device):  # device string or torch.device
     """Context manager that validates device availability and yields resolved device."""
@@ -37,8 +64,45 @@ def _device_ctx(dev: str | torch.device):  # device string or torch.device
         dev = torch.device("cpu")
     yield dev
 
-#| export
 def _sync(dev: torch.device) -> None:  # device to synchronize
     """Synchronize CUDA device if applicable."""
     if dev.type == "cuda":
         torch.cuda.synchronize(dev)
+
+
+def _default_devices() -> list[str]:
+    """Return default device list: ['cpu'] + ['cuda'] if available."""
+    devices = ["cpu"]
+    if torch.cuda.is_available():
+        devices.append("cuda")
+    return devices
+
+
+def _run_on_devices(
+    compute_fn,                                          # single-device compute function
+    model: torch.nn.Module,                              # model to benchmark
+    sample: torch.Tensor,                                # input tensor
+    devices: list[str | torch.device] | None,            # devices to run on (None = default)
+    nan_factory,                                         # callable(device_str) -> metrics with NaN values
+    metric_name: str,                                    # for warning messages (e.g., "Speed", "Memory")
+    **kwargs,
+) -> dict:
+    """Run compute_fn on multiple devices with unified error handling.
+    
+    Returns dict mapping device string to metrics (or NaN metrics on failure).
+    """
+    if devices is None:
+        devices = _default_devices()
+
+    out = {}
+    for d in devices:
+        d_str = str(d)
+        try:
+            out[d_str] = compute_fn(model, sample, device=d, **kwargs)
+        except (RuntimeError, torch.cuda.OutOfMemoryError) as e:
+            warnings.warn(f"{metric_name} benchmark failed on {d}: {e}")
+            out[d_str] = nan_factory(d_str)
+        except Exception as e:
+            warnings.warn(f"Unexpected error during {metric_name} benchmark on {d}: {e}")
+            out[d_str] = nan_factory(d_str)
+    return out

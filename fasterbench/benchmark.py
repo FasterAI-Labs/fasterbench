@@ -7,33 +7,21 @@ from __future__ import annotations
 
 import json
 import torch
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterator
 from dataclasses import dataclass, field
-from typing import Sequence, Dict, Any, Optional, Iterator
+from typing import Sequence, Any
 
-from .size import SizeMetrics, compute_size
-from .speed import SpeedMetrics, compute_speed_multi
-from .compute import ComputeMetrics, compute_compute
-from .memory import MemoryMetrics, compute_memory_multi
-from .energy import EnergyMetrics, compute_energy_multi
+from .core import _fmt_human, _section
+from .size import *
+from .speed import *
+from .compute import *
+from .memory import *
+from .energy import *
 
 # %% auto #0
 __all__ = ['BenchmarkResult', 'benchmark']
 
 # %% ../nbs/07_benchmark.ipynb #qwob04wlkqs
-def _fmt_params(n: int) -> str:
-    """Format parameter count with appropriate suffix."""
-    if n >= 1e9: return f"{n/1e9:.2f}B"
-    if n >= 1e6: return f"{n/1e6:.2f}M"
-    if n >= 1e3: return f"{n/1e3:.2f}K"
-    return str(n)
-
-def _section(title: str) -> str:
-    """Create a section header."""
-    return f"═══ {title} " + "═" * (40 - len(title))
-
-
-#| export
 @dataclass
 class BenchmarkResult(Mapping):
     """Structured container for benchmark results with typed access.
@@ -41,19 +29,19 @@ class BenchmarkResult(Mapping):
     Provides both typed attribute access (e.g., `result.speed["cpu"].mean_ms`)
     and backward-compatible dict-like access (e.g., `result["speed_cpu_mean_ms"]`).
     """
-    size: Optional[SizeMetrics] = None
-    speed: Dict[str, SpeedMetrics] = field(default_factory=dict)
-    compute: Optional[ComputeMetrics] = None
-    memory: Dict[str, MemoryMetrics] = field(default_factory=dict)
-    energy: Dict[str, EnergyMetrics] = field(default_factory=dict)
-    _dict_cache: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    size: SizeMetrics | None = None
+    speed: dict[str, SpeedMetrics] = field(default_factory=dict)
+    compute: ComputeMetrics | None = None
+    memory: dict[str, MemoryMetrics] = field(default_factory=dict)
+    energy: dict[str, EnergyMetrics] = field(default_factory=dict)
+    _dict_cache: dict[str, Any] | None = field(default=None, repr=False)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Return flat dict matching the original `benchmark()` return format. Cached."""
         if self._dict_cache is not None:
             return self._dict_cache
         
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         if self.size is not None:
             out.update({f"size_{k}": v for k, v in self.size.as_dict().items()})
         for dev, met in self.speed.items():
@@ -75,18 +63,16 @@ class BenchmarkResult(Mapping):
         if self.size is not None:
             lines.append(_section("Size"))
             lines.append(f"  Disk:   {self.size.size_mib:.2f} MiB")
-            lines.append(f"  Params: {_fmt_params(self.size.num_params)}")
+            lines.append(f"  Params: {_fmt_human(self.size.num_params)}")
         
         if self.speed:
             lines.append(_section("Speed"))
             for dev, m in self.speed.items():
                 lines.append(f"  {dev}: {m.mean_ms:.2f} ms  │  {m.throughput_s:.1f} inf/s  │  p99: {m.p99_ms:.2f} ms")
         
-        if self.compute is not None:
+        if self.compute is not None and self.compute.macs_available:
             lines.append(_section("Compute"))
-            if self.compute.macs_available:
-                lines.append(f"  MACs:   {self.compute.macs_m:.1f} M")
-            lines.append(f"  Params: {self.compute.params_m:.2f} M")
+            lines.append(f"  MACs: {self.compute.macs_m:.1f} M")
         
         if self.memory:
             lines.append(_section("Memory"))
@@ -142,15 +128,14 @@ def benchmark(
     if sample.dim() == 0:
         raise ValueError("sample must have at least 1 dimension")
 
-    params = sum(p.numel() for p in model.parameters() if p.requires_grad) if metrics_set & {"size", "compute"} else None
     was_training = model.training
     model.eval()
 
     try:
         return BenchmarkResult(
-            size=compute_size(model, params_count=params) if "size" in metrics_set else None,
+            size=compute_size(model) if "size" in metrics_set else None,
             speed=compute_speed_multi(model, sample, devices=speed_devices, **kwargs) if "speed" in metrics_set else {},
-            compute=compute_compute(model, sample, params_count=params) if "compute" in metrics_set else None,
+            compute=compute_compute(model, sample) if "compute" in metrics_set else None,
             memory=compute_memory_multi(model, sample, devices=memory_devices, **kwargs) if "memory" in metrics_set else {},
             energy=compute_energy_multi(model, sample, devices=energy_devices, **kwargs) if "energy" in metrics_set else {},
         )

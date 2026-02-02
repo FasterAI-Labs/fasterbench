@@ -6,11 +6,11 @@
 from __future__ import annotations
 import math, os, time, warnings
 from dataclasses import dataclass, asdict
-from typing import Dict, Sequence
+from typing import Sequence
 
 import torch
 
-from .core import _device_ctx, _sync
+from .core import _device_ctx, _sync, _run_on_devices
 
 try:
     from codecarbon import EmissionsTracker, OfflineEmissionsTracker
@@ -21,22 +21,29 @@ except ImportError:
 __all__ = ['EnergyMetrics', 'compute_energy', 'compute_energy_multi']
 
 # %% ../nbs/05_energy.ipynb #58dcf143
-@dataclass
+@dataclass(slots=True)
 class EnergyMetrics:
     """Energy consumption and carbon footprint metrics."""
     mean_watts: float   # average power during measurement
     energy_wh: float    # Wh per inference
     co2_eq_g: float     # g CO₂-eq per inference
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, float]:
         return asdict(self)
+
+
+#| export
+def _nan_energy_metrics(device: str) -> EnergyMetrics:  # device string (unused, for consistent signature)
+    """Create EnergyMetrics with NaN values for failed benchmarks."""
+    nan = float("nan")
+    return EnergyMetrics(nan, nan, nan)
 
 
 #| export
 @torch.inference_mode()
 def compute_energy(
     model: torch.nn.Module,                  # model to benchmark
-    x: torch.Tensor,                         # input tensor (with batch dimension)
+    sample: torch.Tensor,                    # input tensor (with batch dimension)
     *,
     device: str | torch.device = "cpu",      # device to run on
     warmup: int = 20,                        # warmup iterations
@@ -48,7 +55,7 @@ def compute_energy(
     """Measure power consumption and carbon footprint using codecarbon."""
     if EmissionsTracker is None:
         warnings.warn("codecarbon not installed – returning NaNs")
-        return EnergyMetrics(*(math.nan,)*3)
+        return _nan_energy_metrics(str(device))
 
     Tracker = OfflineEmissionsTracker if offline else EmissionsTracker
     tracker = Tracker(
@@ -61,16 +68,16 @@ def compute_energy(
 
     with _device_ctx(device) as dev:
         model = model.eval().to(dev)
-        x = x.to(dev, non_blocking=True)
+        sample = sample.to(dev, non_blocking=True)
 
         for _ in range(warmup):
-            model(x)
+            model(sample)
         _sync(dev)
 
         tracker.start()
         t0 = time.perf_counter()
         for _ in range(steps):
-            model(x)
+            model(sample)
         _sync(dev)
         tracker.stop()
         dur_s = time.perf_counter() - t0
@@ -89,25 +96,15 @@ def compute_energy(
 #| export
 def compute_energy_multi(
     model: torch.nn.Module,                                # model to benchmark
-    x: torch.Tensor,                                       # input tensor (with batch dimension)
+    sample: torch.Tensor,                                  # input tensor (with batch dimension)
     *,
     devices: Sequence[str | torch.device] | None = None,   # devices to benchmark (default: cpu + cuda)
     **kwargs,
-) -> Dict[str, EnergyMetrics]:
+) -> dict[str, EnergyMetrics]:
     """Measure energy on multiple devices."""
-    if devices is None:
-        devices = ["cpu"]
-        if torch.cuda.is_available():
-            devices.append("cuda")
-
-    out = {}
-    for d in devices:
-        try:
-            out[str(d)] = compute_energy(model, x, device=d, **kwargs)
-        except (RuntimeError, torch.cuda.OutOfMemoryError) as e:
-            warnings.warn(f"Energy benchmark failed on {d}: {e}")
-            out[str(d)] = EnergyMetrics(*(math.nan,)*3)
-        except Exception as e:
-            warnings.warn(f"Unexpected error during energy benchmark on {d}: {e}")
-            out[str(d)] = EnergyMetrics(*(math.nan,)*3)
-    return out
+    return _run_on_devices(
+        compute_energy, model, sample, devices,
+        nan_factory=_nan_energy_metrics,
+        metric_name="Energy",
+        **kwargs
+    )

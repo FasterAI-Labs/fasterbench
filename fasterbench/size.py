@@ -9,7 +9,6 @@ from .core import _bytes_to_mib
 import torch
 import io
 from dataclasses import dataclass, asdict
-from typing import Dict, Optional
 
 # %% auto #0
 __all__ = ['get_model_size', 'get_num_parameters', 'SizeMetrics', 'compute_size']
@@ -44,15 +43,15 @@ class SizeMetrics:
     size_mib: float
     num_params: int
 
-    def as_dict(self) -> Dict[str, float]:
+    def as_dict(self) -> dict[str, float]:
         return asdict(self)
 
 
 #| export
 def compute_size(
-    model: torch.nn.Module,                  # model to measure
+    model: torch.nn.Module,             # model to measure
     *,
-    params_count: Optional[int] = None,      # pre-computed parameter count (avoids recount)
+    params_count: int | None = None,    # pre-computed parameter count (avoids recount)
 ) -> SizeMetrics:
     """Compute size metrics for a model."""
     disk = get_model_size(model)

@@ -13,12 +13,16 @@ from fasterbench.speed import (
     SpeedMetrics, compute_speed, compute_speed_multi, 
     sweep_threads, sweep_latency, sweep_batch_sizes,
 )
-from .profiling import profile_layers, LayerProfiler
+from .profiling import LayerProfiler
 from .compute import ComputeMetrics, compute_compute
 from .memory import MemoryMetrics, compute_memory, compute_memory_multi
 from .energy import EnergyMetrics, compute_energy, compute_energy_multi
+from fasterbench.sensitivity import (
+    SensitivityAnalyzer, SensitivityResult, LayerSensitivity, analyze_sensitivity,
+)
 from .plot import create_radar_plot, SPECS
 from .utils import parse_metric_value
+from .report import Report, ComparisonReport, ReportMetricDelta
 
 __all__ = [
     # Main entry point
@@ -29,15 +33,19 @@ __all__ = [
     'SpeedMetrics', 'compute_speed', 'compute_speed_multi', 
     'sweep_threads', 'sweep_latency', 'sweep_batch_sizes',
     # Profiling
-    'profile_layers', 'LayerProfiler',
+    'LayerProfiler',
     # Compute
     'ComputeMetrics', 'compute_compute',
     # Memory
     'MemoryMetrics', 'compute_memory', 'compute_memory_multi',
     # Energy
     'EnergyMetrics', 'compute_energy', 'compute_energy_multi',
+    # Sensitivity
+    'SensitivityAnalyzer', 'SensitivityResult', 'LayerSensitivity', 'analyze_sensitivity',
     # Plot
     'create_radar_plot', 'SPECS',
     # Utils
     'parse_metric_value',
+    # Report
+    'Report', 'ComparisonReport', 'ReportMetricDelta',
 ]

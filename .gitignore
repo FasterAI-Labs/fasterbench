@@ -149,3 +149,16 @@ checklink/cookies.txt
 
 # Quarto
 .quarto
+
+# Model weights
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Generated reports
+nbs/report.html
+nbs/report.md
+
+# Deprecated config
+nbs/sidebar.yml

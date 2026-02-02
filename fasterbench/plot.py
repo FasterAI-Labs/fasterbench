@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from .utils import *
 import re, numbers
-from typing import Any, Dict, List, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 import plotly.graph_objects as go
 
 # %% auto #0
@@ -17,7 +17,7 @@ __all__ = ['SPECS', 'create_radar_plot']
 _UNIT_RX = re.compile(r"([.\d]+)\s*([kKmMgGtT]?)[bB]?$")
 
 #| export
-_SCALE: Dict[str, float] = dict(K=1e3, M=1e6, G=1e9, T=1e12,
+_SCALE: dict[str, float] = dict(K=1e3, M=1e6, G=1e9, T=1e12,
                                  k=1e3, m=1e6, g=1e9, t=1e12)
 
 #| export
@@ -32,7 +32,7 @@ def _parse(x):  # metric value (number or string with unit suffix)
 
 #| export
 # Default specs: (extractor, format_string, default_max)
-SPECS: Dict[str, tuple] = {
+SPECS: dict[str, tuple] = {
     "💾": (lambda d: d["size_disk_bytes"] / 1e6,               "Size : {:.1f} MiB",       500),
     "🧮": (lambda d: _parse(d["size_num_params"]) / 1e6,       "Params: {:.2f} M",         50),
     "⏱️": (lambda d: d["speed_cpu_mean_ms"],                   "Latency: {:.1f} ms",     2000),
@@ -42,10 +42,10 @@ SPECS: Dict[str, tuple] = {
 
 #| export
 def create_radar_plot(
-    benchmark_results: Sequence[Mapping[str, Any]],  # sequence of benchmark result dicts
-    model_names: Sequence[str] | None = None,        # optional list of model names for the legend
+    benchmark_results: Sequence[Mapping[str, Any]],    # sequence of benchmark result dicts
+    model_names: Sequence[str] | None = None,          # optional list of model names for the legend
     reference_max: Mapping[str, float] | None = None,  # optional dict mapping emoji to max value
-    specs: Dict[str, tuple] | None = None,           # custom specs override (defaults to SPECS)
+    specs: dict[str, tuple] | None = None,             # custom specs override (defaults to SPECS)
 ) -> go.Figure:
     """Create a radar plot comparing benchmark results across models."""
     specs = specs or SPECS
@@ -54,8 +54,8 @@ def create_radar_plot(
         model_names = [f"Model {i}" for i in range(len(benchmark_results))]
 
     # ---------- collect raw values -------------------------------------
-    raw_matrix: Dict[str, List[float]] = {e: [] for e in specs}
-    hover_mat: Dict[str, List[str]] = {e: [] for e in specs}
+    raw_matrix: dict[str, list[float]] = {e: [] for e in specs}
+    hover_mat: dict[str, list[str]] = {e: [] for e in specs}
 
     for res in benchmark_results:
         for emoji, (extract, fmt, _) in specs.items():
@@ -75,8 +75,8 @@ def create_radar_plot(
     fig = go.Figure()
 
     for idx, name in enumerate(model_names):
-        norm: List[float] = []
-        hovers: List[str] = []
+        norm: list[float] = []
+        hovers: list[str] = []
         for e in specs:
             val = raw_matrix[e][idx]
             norm.append(val / ref_max[e] if ref_max[e] else 0)

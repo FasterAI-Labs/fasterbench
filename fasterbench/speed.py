@@ -6,21 +6,20 @@
 from __future__ import annotations
 import math, time, warnings
 from dataclasses import dataclass, asdict
-from typing import Dict, Sequence, List, Mapping
+from typing import Mapping, Sequence
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.benchmark import Timer
 
-
-from .core import _device_ctx, _sync
+from .core import _device_ctx, _sync, _run_on_devices
 
 # %% auto #0
 __all__ = ['SpeedMetrics', 'compute_speed', 'compute_speed_multi', 'sweep_threads', 'sweep_batch_sizes', 'sweep_latency']
 
 # %% ../nbs/02_speed.ipynb #eb5e3063
-@dataclass
+@dataclass(slots=True)
 class SpeedMetrics:
     """Latency and throughput metrics for a single device."""
     p50_ms: float
@@ -30,8 +29,15 @@ class SpeedMetrics:
     std_ms: float
     throughput_s: float
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, float]:
         return asdict(self)
+
+
+#| export
+def _nan_speed_metrics(device: str) -> SpeedMetrics:  # device string (unused, for consistent signature)
+    """Create SpeedMetrics with NaN values for failed benchmarks."""
+    nan = float("nan")
+    return SpeedMetrics(nan, nan, nan, nan, nan, nan)
 
 
 #| export
@@ -69,7 +75,7 @@ def _forward_latencies(
             model(sample)
         _sync(dev)
 
-        lat: List[float] = []
+        lat: list[float] = []
         if use_torch_timer and dev.type == "cpu":
             t = Timer(stmt="model(x)", globals={"model": model, "x": sample})
             m = t.blocked_autorange(min_run_time=0.3)
@@ -116,24 +122,14 @@ def compute_speed_multi(
     *,
     devices: Sequence[str | torch.device] | None = None,   # devices to benchmark (default: cpu + cuda if available)
     **kwargs,
-) -> Dict[str, SpeedMetrics]:
+) -> dict[str, SpeedMetrics]:
     """Measure latency/throughput on multiple devices."""
-    if devices is None:
-        devices = ["cpu"]
-        if torch.cuda.is_available():
-            devices.append("cuda")
-
-    out: Dict[str, SpeedMetrics] = {}
-    for d in devices:
-        try:
-            out[str(d)] = compute_speed(model, sample, device=d, **kwargs)
-        except (RuntimeError, torch.cuda.OutOfMemoryError) as e:
-            warnings.warn(f"Speed benchmark failed on {d}: {e}")
-            out[str(d)] = SpeedMetrics(*[math.nan] * 6)
-        except Exception as e:
-            warnings.warn(f"Unexpected error during speed benchmark on {d}: {e}")
-            out[str(d)] = SpeedMetrics(*[math.nan] * 6)
-    return out
+    return _run_on_devices(
+        compute_speed, model, sample, devices,
+        nan_factory=_nan_speed_metrics,
+        metric_name="Speed",
+        **kwargs
+    )
 
 
 #| export
@@ -144,7 +140,7 @@ def sweep_threads(
     *,
     warmup: int = 20,                            # warmup iterations per thread count
     steps: int = 100,                            # measurement iterations per thread count
-) -> List[Dict]:
+) -> list[dict]:
     """Sweep CPU thread counts to find optimal parallelism."""
     rows = []
     for n in thread_counts:
@@ -163,7 +159,7 @@ def sweep_batch_sizes(
     device: str | torch.device = "cuda",             # device to run on
     warmup: int = 20,                                # warmup iterations per batch size
     steps: int = 100,                                # measurement iterations per batch size
-) -> List[Dict]:
+) -> list[dict]:
     """Sweep batch sizes to find optimal throughput."""
     rows = []
     for bs in batch_sizes:
@@ -174,7 +170,7 @@ def sweep_batch_sizes(
             rows.append({"batch_size": bs, "latency_per_sample_ms": stats["mean_ms"] / bs, **stats})
         except (RuntimeError, torch.cuda.OutOfMemoryError) as e:
             warnings.warn(f"Batch size {bs} failed (likely OOM): {e}")
-            rows.append({"batch_size": bs, "mean_ms": math.nan, "throughput_s": math.nan})
+            rows.append({"batch_size": bs, "mean_ms": float("nan"), "throughput_s": float("nan")})
     return rows
 
 
@@ -186,7 +182,7 @@ def sweep_latency(
     device: str | torch.device = "cuda",      # device to run on
     warmup: int = 20,                         # warmup iterations per shape
     steps: int = 100,                         # measurement iterations per shape
-) -> List[Dict]:
+) -> list[dict]:
     """Sweep input shapes to analyze latency vs resolution."""
     rows = []
     for shape in shapes:
