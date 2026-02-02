@@ -59,9 +59,9 @@ print(result["size_disk_bytes"])
 ### BenchmarkResult: Typed Access + Backward Compatibility
 
 The
-[`benchmark()`](https://FasterAI-Labs.github.io/fasterbench/benchmark.html#benchmark)
+[`benchmark()`](https://FasterAI-Labs.github.io/fasterbench/analysis/benchmark.html#benchmark)
 function returns a
-[`BenchmarkResult`](https://FasterAI-Labs.github.io/fasterbench/benchmark.html#benchmarkresult)
+[`BenchmarkResult`](https://FasterAI-Labs.github.io/fasterbench/analysis/benchmark.html#benchmarkresult)
 object with both typed attribute access and dict-like access:
 
 ``` python
@@ -210,7 +210,7 @@ fig = create_radar_plot([resnet, mobilenet],
 fig.show()
 ```
 
-![](nbs/imgs/newplot.png)
+![](../nbs/imgs/newplot.png)
 
 ## Documentation
 

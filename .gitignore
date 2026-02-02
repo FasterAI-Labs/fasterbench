@@ -165,3 +165,5 @@ nbs/sidebar.yml
 
 # Dataset files
 nbs/data/
+nbs/analysis/report.html
+nbs/analysis/report.md
