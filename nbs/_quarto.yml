@@ -33,28 +33,28 @@ website:
       - index.ipynb
       - section: Tutorials
         contents:
-        - tutorials/tutorial.ipynb
+        - tutorials/benchmark.ipynb
         - tutorials/profiling.ipynb
         - tutorials/sensitivity.ipynb
       - section: Core
         contents:
-        - 00_core.ipynb
-        - 03_utils.ipynb
+        - core/core.ipynb
+        - core/utils.ipynb
       - section: Metrics
         contents:
-        - 01_size.ipynb
-        - 02_speed.ipynb
-        - 03_compute.ipynb
-        - 04_memory.ipynb
-        - 05_energy.ipynb
+        - metrics/size.ipynb
+        - metrics/speed.ipynb
+        - metrics/compute.ipynb
+        - metrics/memory.ipynb
+        - metrics/energy.ipynb
       - section: Analysis
         contents:
-        - 07_benchmark.ipynb
-        - 08_profiling.ipynb
-        - 06_sensitivity.ipynb
-        - 09_report.ipynb
+        - analysis/benchmark.ipynb
+        - analysis/profiling.ipynb
+        - analysis/sensitivity.ipynb
+        - analysis/report.ipynb
       - section: Visualization
         contents:
-        - 01_plot.ipynb
+        - visualization/plot.ipynb
 
 metadata-files: [nbdev.yml]

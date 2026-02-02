@@ -162,3 +162,6 @@ nbs/report.md
 
 # Deprecated config
 nbs/sidebar.yml
+
+# Dataset files
+nbs/data/
