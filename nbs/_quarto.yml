@@ -8,13 +8,53 @@ format:
     toc: true
 
 website:
-  twitter-card: true
+  twitter-card:
+    creator: "@nathanhubens"
+    site: "@fasterai"
   open-graph: true
   repo-actions: [issue]
+  page-footer: "&copy; By Nathan Hubens"
   navbar:
     background: primary
     search: true
+    collapse-below: lg
+    left:
+      - text: "Report an Issue"
+        icon: bug
+        href: https://github.com/FasterAI-Labs/fasterbench/issues
+    right:
+      - icon: github
+        href: "https://github.com/FasterAI-Labs/fasterbench"
+
   sidebar:
     style: floating
+    collapse-level: 1
+    contents:
+      - index.ipynb
+      - section: Tutorials
+        contents:
+        - tutorials/tutorial.ipynb
+        - tutorials/profiling.ipynb
+        - tutorials/sensitivity.ipynb
+      - section: Core
+        contents:
+        - 00_core.ipynb
+        - 03_utils.ipynb
+      - section: Metrics
+        contents:
+        - 01_size.ipynb
+        - 02_speed.ipynb
+        - 03_compute.ipynb
+        - 04_memory.ipynb
+        - 05_energy.ipynb
+      - section: Analysis
+        contents:
+        - 07_benchmark.ipynb
+        - 08_profiling.ipynb
+        - 06_sensitivity.ipynb
+        - 09_report.ipynb
+      - section: Visualization
+        contents:
+        - 01_plot.ipynb
 
-metadata-files: [nbdev.yml, sidebar.yml]
+metadata-files: [nbdev.yml]
