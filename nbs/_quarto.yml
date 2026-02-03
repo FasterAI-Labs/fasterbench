@@ -35,7 +35,6 @@ website:
         contents:
         - tutorials/benchmark.ipynb
         - tutorials/profiling.ipynb
-        - tutorials/sensitivity.ipynb
       - section: Core
         contents:
         - core/core.ipynb
@@ -51,7 +50,6 @@ website:
         contents:
         - analysis/benchmark.ipynb
         - analysis/profiling.ipynb
-        - analysis/sensitivity.ipynb
         - analysis/report.ipynb
       - section: Visualization
         contents:
