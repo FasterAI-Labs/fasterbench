@@ -1,11 +1,32 @@
 [build-system]
-requires = ["setuptools>=64.0"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name="fasterbench"
-requires-python=">=3.7"
-dynamic = [ "keywords", "description", "version", "dependencies", "optional-dependencies", "readme", "license", "authors", "classifiers", "entry-points", "scripts", "urls"]
+name = "fasterbench"
+dynamic = ["version"]
+description = "A library for benchmarking AI models"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "Apache-2.0"}
+authors = [{name = "nathanhubens", email = "nathan.hubens@gmail.com"}]
+keywords = ['nbdev', 'jupyter', 'notebook', 'python']
+classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+dependencies = ['torch', 'fastcore', 'prettytable', 'tqdm', 'codecarbon', 'torchprofile', 'thop', 'plotly']
 
-[tool.uv]
-cache-keys = [{ file = "pyproject.toml" }, { file = "settings.ini" }, { file = "setup.py" }]
+[project.urls]
+Repository = "https://github.com/FasterAI-Labs/fasterbench"
+Documentation = "https://FasterAI-Labs.github.io/fasterbench"
+
+[project.entry-points.nbdev]
+fasterbench = "fasterbench._modidx:d"
+
+[tool.setuptools.dynamic]
+version = {attr = "fasterbench.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["fasterbench"]
+
+[tool.nbdev]
+tst_flags = 'notest'
+jupyter_hooks = true
