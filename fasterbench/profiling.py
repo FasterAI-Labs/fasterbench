@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .core import _device_ctx, _fmt_table, _fmt_float, _fmt_macs
+from .core import _bytes_to_mib, _device_ctx, _section, _fmt_table, _fmt_float, _fmt_macs
 
 # %% auto #0
 __all__ = ['LayerProfiler']
@@ -33,6 +33,15 @@ def _output_bytes(output) -> int:  # layer output (tensor, tuple, list, or dict)
     elif isinstance(output, dict):
         return sum(_output_bytes(v) for v in output.values())
     return 0
+
+
+def _leaf_modules(model: nn.Module) -> dict[str, nn.Module]:
+    """Return dict of leaf modules (no children) with non-empty names."""
+    return {
+        name: module
+        for name, module in model.named_modules()
+        if len(list(module.children())) == 0 and name
+    }
 
 
 #| export
@@ -97,7 +106,7 @@ def _setup_memory_hooks(
     for name, module in leaf_modules.items():
         def make_hook(layer_name: str):
             def hook(mod, inp, output):
-                mib = _output_bytes(output) / (1024 * 1024)
+                mib = _bytes_to_mib(_output_bytes(output))
                 measurements[layer_name].append(mib)
             return hook
         handles.append(module.register_forward_hook(make_hook(name)))
@@ -127,7 +136,7 @@ def _setup_compute_hooks(
                         macs = handler_fn(mod, inp, output)
                         if macs is not None:
                             measurements[layer_name].append(macs)
-                    except:
+                    except Exception:
                         pass
                 return hook
             hook_handles.append(module.register_forward_hook(make_hook(name, handler)))
@@ -174,17 +183,12 @@ def _profile_layers(
         model = model.eval().to(dev)
         sample = sample.to(dev)
         
-        # Get leaf modules
-        leaf_modules = {
-            name: module
-            for name, module in model.named_modules()
-            if len(list(module.children())) == 0 and name
-        }
+        leaf_mods = _leaf_modules(model)
         
-        measurements: dict[str, list] = {name: [] for name in leaf_modules}
+        measurements: dict[str, list] = {name: [] for name in leaf_mods}
         
         # Setup metric-specific hooks (all have same signature now)
-        handles = _HOOK_SETUP[metric](leaf_modules, measurements, dev.type)
+        handles = _HOOK_SETUP[metric](leaf_mods, measurements, dev.type)
         if handles is None:  # e.g., torchprofile not available
             return []
         
@@ -207,7 +211,7 @@ def _profile_layers(
             results = []
             total = 0.0
             
-            for name, module in leaf_modules.items():
+            for name, module in leaf_mods.items():
                 if measurements[name]:
                     if config["aggregate"] == "mean":
                         value = float(np.mean(measurements[name]))
@@ -274,11 +278,7 @@ class LayerProfiler:
     ):
         self.model = model
         self.sample = sample
-        self._leaf_modules = {
-            name: module 
-            for name, module in model.named_modules() 
-            if len(list(module.children())) == 0 and name
-        }
+        self._leaf_modules = _leaf_modules(model)
         self._results: list[dict] = []
         self._profiled_metrics: list[str] = []
     
@@ -372,7 +372,7 @@ class LayerProfiler:
             if col not in self._results[0]:
                 continue
             
-            print(f"═══ {cfg['label']} {'═' * (50 - len(cfg['label']))}")
+            print(_section(cfg['label'], 54))
             
             sorted_layers = sorted(
                 self._results,

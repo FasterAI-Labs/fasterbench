@@ -19,7 +19,6 @@ from .memory import MemoryMetrics, compute_memory, compute_memory_multi
 from .energy import EnergyMetrics, compute_energy, compute_energy_multi
 from .plot import create_radar_plot, SPECS
 from .utils import parse_metric_value
-from .report import Report, ComparisonReport, ReportMetricDelta
 
 __all__ = [
     # Main entry point
@@ -41,6 +40,4 @@ __all__ = [
     'create_radar_plot', 'SPECS',
     # Utils
     'parse_metric_value',
-    # Report
-    'Report', 'ComparisonReport', 'ReportMetricDelta',
 ]
