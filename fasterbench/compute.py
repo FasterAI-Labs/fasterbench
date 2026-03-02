@@ -5,7 +5,6 @@
 # %% ../nbs/metrics/compute.ipynb #0091d170
 from __future__ import annotations
 
-import logging
 import warnings
 from dataclasses import dataclass
 from typing import Any
@@ -61,14 +60,7 @@ def compute_compute(
 
     if _thop_profile is not None:
         try:
-            # Suppress thop's verbose INFO logging (e.g. "Register count_convNd()")
-            thop_logger = logging.getLogger("thop")
-            prev_level = thop_logger.level
-            thop_logger.setLevel(logging.WARNING)
-            try:
-                mac_raw, _ = _thop_profile(model, inputs=(sample,))
-            finally:
-                thop_logger.setLevel(prev_level)
+            mac_raw, _ = _thop_profile(model, inputs=(sample,), verbose=False)
             macs_m = round(mac_raw / 1e6, 3)
         except Exception as e:
             warnings.warn(f"thop failed: {e}")
