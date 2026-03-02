@@ -63,7 +63,7 @@ def compute_energy(
         country_iso_code=(country_iso or os.getenv("NNBENCH_ISO", "USA")),
         measure_power_secs=measure_secs,
         save_to_file=False,
-        log_level="error",
+        log_level="critical",
     )
 
     with _device_ctx(device) as dev:
