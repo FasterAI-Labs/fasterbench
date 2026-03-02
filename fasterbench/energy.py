@@ -75,12 +75,20 @@ def compute_energy(
         _sync(dev)
 
         tracker.start()
-        t0 = time.perf_counter()
-        for _ in range(steps):
-            model(sample)
-        _sync(dev)
-        tracker.stop()
+        try:
+            t0 = time.perf_counter()
+            for _ in range(steps):
+                model(sample)
+            _sync(dev)
+        finally:
+            tracker.stop()
         dur_s = time.perf_counter() - t0
+
+    # codecarbon silently fails if another instance is running,
+    # leaving final_emissions_data as None
+    if tracker.final_emissions_data is None:
+        warnings.warn("codecarbon tracker did not collect data (another instance may be running)")
+        return _nan_energy_metrics(str(device))
 
     ene_kwh = tracker.final_emissions_data.energy_consumed
     co2_kg = tracker.final_emissions
