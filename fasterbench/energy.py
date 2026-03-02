@@ -4,7 +4,7 @@
 
 # %% ../nbs/metrics/energy.ipynb #d27f26a4
 from __future__ import annotations
-import math, os, time, warnings
+import logging, os, time, warnings
 from dataclasses import dataclass, asdict
 from typing import Sequence
 
@@ -14,6 +14,9 @@ from .core import _device_ctx, _sync, _run_on_devices
 
 try:
     from codecarbon import EmissionsTracker, OfflineEmissionsTracker
+    # Suppress codecarbon's verbose logging BEFORE any tracker is constructed,
+    # because codecarbon logs messages in __init__ before applying log_level.
+    logging.getLogger("codecarbon").setLevel(logging.CRITICAL)
 except ImportError:
     EmissionsTracker = OfflineEmissionsTracker = None
 
@@ -40,6 +43,30 @@ def _nan_energy_metrics(device: str) -> EnergyMetrics:  # device string (unused,
 
 
 #| export
+def _clear_stale_codecarbon_lock() -> None:
+    """Remove stale codecarbon lock file if the owning process no longer exists."""
+    import tempfile
+    lock_path = os.path.join(tempfile.gettempdir(), ".codecarbon.lock")
+    if not os.path.exists(lock_path):
+        return
+    try:
+        # Read the PID from the lock file (codecarbon writes its PID there)
+        with open(lock_path) as f:
+            content = f.read().strip()
+        if content:
+            pid = int(content)
+            os.kill(pid, 0)  # Check if process exists (signal 0 = no-op)
+            # Process exists — lock is valid, don't remove
+            return
+    except (ValueError, ProcessLookupError, PermissionError, OSError):
+        pass  # PID invalid or process dead — lock is stale
+    try:
+        os.remove(lock_path)
+    except OSError:
+        pass
+
+
+#| export
 @torch.inference_mode()
 def compute_energy(
     model: torch.nn.Module,                  # model to benchmark
@@ -57,13 +84,15 @@ def compute_energy(
         warnings.warn("codecarbon not installed – returning NaNs")
         return _nan_energy_metrics(str(device))
 
+    _clear_stale_codecarbon_lock()
+
     Tracker = OfflineEmissionsTracker if offline else EmissionsTracker
     tracker = Tracker(
         project_name="fasterbench",
         country_iso_code=(country_iso or os.getenv("NNBENCH_ISO", "USA")),
         measure_power_secs=measure_secs,
         save_to_file=False,
-        log_level="error",
+        log_level="critical",
     )
 
     with _device_ctx(device) as dev:
@@ -75,12 +104,20 @@ def compute_energy(
         _sync(dev)
 
         tracker.start()
-        t0 = time.perf_counter()
-        for _ in range(steps):
-            model(sample)
-        _sync(dev)
-        tracker.stop()
+        try:
+            t0 = time.perf_counter()
+            for _ in range(steps):
+                model(sample)
+            _sync(dev)
+        finally:
+            tracker.stop()
         dur_s = time.perf_counter() - t0
+
+    # codecarbon silently fails if another instance is running,
+    # leaving final_emissions_data as None
+    if tracker.final_emissions_data is None:
+        warnings.warn("codecarbon tracker did not collect data (another instance may be running)")
+        return _nan_energy_metrics(str(device))
 
     ene_kwh = tracker.final_emissions_data.energy_consumed
     co2_kg = tracker.final_emissions

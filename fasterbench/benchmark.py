@@ -53,7 +53,7 @@ class BenchmarkResult(Mapping):
         for dev, met in self.energy.items():
             out.update({f"energy_{dev}_{k}": v for k, v in met.as_dict().items()})
         
-        object.__setattr__(self, '_dict_cache', out)
+        self._dict_cache = out
         return out
 
     def _format_summary(self) -> str:

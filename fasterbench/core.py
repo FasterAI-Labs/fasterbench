@@ -45,16 +45,6 @@ def _section(title: str, width: int = 40) -> str:  # section title, total width
     """Create a section header with box-drawing characters."""
     return f"═══ {title} " + "═" * (width - len(title))
 
-def _validate_benchmark_params(
-    warmup: int,  # warmup iterations (must be >= 0)
-    steps: int,   # measurement iterations (must be >= 1)
-) -> None:
-    """Validate common benchmark parameters."""
-    if warmup < 0:
-        raise ValueError(f"warmup must be non-negative, got {warmup}")
-    if steps < 1:
-        raise ValueError(f"steps must be at least 1, got {steps}")
-
 @contextlib.contextmanager
 def _device_ctx(dev: str | torch.device):  # device string or torch.device
     """Context manager that validates device availability and yields resolved device."""

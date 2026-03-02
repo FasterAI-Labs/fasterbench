@@ -43,13 +43,15 @@ def _nan_speed_metrics(device: str) -> SpeedMetrics:  # device string (unused, f
 #| export
 def _stats(lat_ms: np.ndarray, batch: int) -> Mapping[str, float]:
     """Compute latency statistics from raw measurements."""
+    p50, p90, p99 = np.percentile(lat_ms, [50, 90, 99])
+    mean = float(lat_ms.mean())
     return {
-        "p50_ms": float(np.percentile(lat_ms, 50)),
-        "p90_ms": float(np.percentile(lat_ms, 90)),
-        "p99_ms": float(np.percentile(lat_ms, 99)),
-        "mean_ms": float(lat_ms.mean()),
-        "std_ms": float(lat_ms.std(ddof=1)),
-        "throughput_s": batch * 1000.0 / float(lat_ms.mean()),
+        "p50_ms": float(p50),
+        "p90_ms": float(p90),
+        "p99_ms": float(p99),
+        "mean_ms": mean,
+        "std_ms": float(lat_ms.std(ddof=1)) if lat_ms.size > 1 else 0.0,
+        "throughput_s": batch * 1000.0 / mean,
     }
 
 
@@ -80,8 +82,6 @@ def _forward_latencies(
             t = Timer(stmt="model(x)", globals={"model": model, "x": sample})
             m = t.blocked_autorange(min_run_time=0.3)
             per_iter = (np.asarray(m.raw_times) / m.number_per_run) * 1e3
-            if per_iter.size < steps:
-                per_iter = np.resize(per_iter, steps)
             lat = per_iter.tolist()
         elif dev.type == "cuda":
             start_evt, end_evt = torch.cuda.Event(True), torch.cuda.Event(True)
@@ -110,9 +110,8 @@ def compute_speed(
     steps: int = 100,                    # measurement iterations
 ) -> SpeedMetrics:
     """Measure latency and throughput on a single device."""
-    with _device_ctx(device) as dev:
-        lat = _forward_latencies(model, sample, device=dev, warmup=warmup, steps=steps)
-        return SpeedMetrics(**_stats(lat, sample.size(0)))
+    lat = _forward_latencies(model, sample, device=device, warmup=warmup, steps=steps)
+    return SpeedMetrics(**_stats(lat, sample.size(0)))
 
 
 #| export

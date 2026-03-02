@@ -60,7 +60,7 @@ def compute_compute(
 
     if _thop_profile is not None:
         try:
-            mac_raw, _ = _thop_profile(model, inputs=(sample,))
+            mac_raw, _ = _thop_profile(model, inputs=(sample,), verbose=False)
             macs_m = round(mac_raw / 1e6, 3)
         except Exception as e:
             warnings.warn(f"thop failed: {e}")
