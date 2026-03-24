@@ -10,8 +10,8 @@ readme = "README.md"
 requires-python = ">=3.7"
 license = {text = "Apache-2.0"}
 authors = [{name = "nathanhubens", email = "nathan.hubens@gmail.com"}]
-keywords = ['nbdev', 'jupyter', 'notebook', 'python']
-classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+keywords = ['benchmark', 'deep-learning', 'pytorch', 'profiling', 'latency', 'energy']
+classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 4 - Beta", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 dependencies = ['torch', 'fastcore', 'prettytable', 'tqdm', 'codecarbon', 'torchprofile', 'thop', 'plotly']
 
 [project.urls]
