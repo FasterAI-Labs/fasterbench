@@ -35,6 +35,7 @@ website:
         contents:
         - tutorials/benchmark.ipynb
         - tutorials/profiling.ipynb
+        - tutorials/report.ipynb
       - section: Core
         contents:
         - core/core.ipynb
