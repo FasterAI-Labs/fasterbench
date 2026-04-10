@@ -127,7 +127,7 @@ def _setup_compute_hooks(
                         macs = handler_fn(mod, inp, output)
                         if macs is not None:
                             measurements[layer_name].append(macs)
-                    except:
+                    except Exception:
                         pass
                 return hook
             hook_handles.append(module.register_forward_hook(make_hook(name, handler)))

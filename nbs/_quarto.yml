@@ -50,8 +50,7 @@ website:
         contents:
         - analysis/benchmark.ipynb
         - analysis/profiling.ipynb
-        - analysis/report.ipynb
-      - section: Visualization
+        - section: Visualization
         contents:
         - visualization/plot.ipynb
 
