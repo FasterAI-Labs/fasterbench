@@ -28,5 +28,6 @@ version = {attr = "fasterbench.__version__"}
 include = ["fasterbench"]
 
 [tool.nbdev]
+version = "0.1.0"
 tst_flags = 'notest'
 jupyter_hooks = true
