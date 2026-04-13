@@ -40,6 +40,10 @@ __all__ = [
     'EnergyMetrics', 'compute_energy', 'compute_energy_multi',
     # Plot
     'create_radar_plot', 'SPECS',
+    # Report
+    'Report', 'ComparisonReport', 'ReportMetricDelta',
     # Utils
     'parse_metric_value',
 ]
+from .report import Report, ComparisonReport, ReportMetricDelta
+
