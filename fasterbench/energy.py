@@ -65,7 +65,7 @@ def _clear_stale_codecarbon_lock() -> None:
 
 
 #| export
-@torch.inference_mode()
+@torch.no_grad()
 def compute_energy(
     model: torch.nn.Module,                  # model to benchmark
     sample: torch.Tensor,                    # input tensor (with batch dimension)

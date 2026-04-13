@@ -98,7 +98,7 @@ def _forward_latencies(
 
 
 #| export
-@torch.inference_mode()
+@torch.no_grad()
 def compute_speed(
     model: nn.Module,                    # model to benchmark
     sample: torch.Tensor,                # input tensor (with batch dimension)

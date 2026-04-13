@@ -157,7 +157,7 @@ _HOOK_SETUP = {
 }
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def _profile_layers(
     model: nn.Module,              # model to profile
     sample: torch.Tensor,          # input tensor (with batch dimension)
