@@ -19,6 +19,9 @@ from .profiling import LayerProfiler
 from .compute import ComputeMetrics, compute_compute
 from .memory import MemoryMetrics, compute_memory, compute_memory_multi
 from .energy import EnergyMetrics, compute_energy, compute_energy_multi
+from fasterbench.roofline import (
+    HardwarePeaks, RooflinePoint, measure_peaks, clear_peaks_cache, RooflineAnalyzer,
+)
 from .plot import create_radar_plot, SPECS
 from .utils import parse_metric_value
 
@@ -38,6 +41,8 @@ __all__ = [
     'MemoryMetrics', 'compute_memory', 'compute_memory_multi',
     # Energy
     'EnergyMetrics', 'compute_energy', 'compute_energy_multi',
+    # Roofline
+    'HardwarePeaks', 'RooflinePoint', 'measure_peaks', 'clear_peaks_cache', 'RooflineAnalyzer',
     # Plot
     'create_radar_plot', 'SPECS',
     # Report
