@@ -66,6 +66,41 @@ def _default_devices() -> list[str]:
     return devices
 
 
+def _is_quantized(model: torch.nn.Module) -> bool:  # model to inspect
+    """True if the model contains PyTorch quantized modules.
+
+    PyTorch's eager/FX quantized ops (fbgemm/qnnpack) are **CPU-only**. Running
+    them on a CUDA tensor has no registered kernel and *segfaults* the process
+    rather than raising, so callers must avoid dispatching them off-CPU.
+    """
+    return any("quantized" in type(m).__module__ for m in model.modules())
+
+
+def _device_supported(
+    model: torch.nn.Module,      # model to run
+    device: str | torch.device,  # target device
+) -> bool:
+    """False if `model` cannot execute on `device` (quantized models are CPU-only)."""
+    return not (torch.device(device).type != "cpu" and _is_quantized(model))
+
+
+def _ensure_device_supported(
+    model: torch.nn.Module,      # model to run
+    device: str | torch.device,  # target device
+) -> None:
+    """Raise a *catchable* error instead of letting PyTorch segfault.
+
+    Guards the forward-executing profilers: a quantized model dispatched on a
+    non-CPU device would crash the interpreter with SIGSEGV, so we fail loudly
+    (and recoverably) first.
+    """
+    if not _device_supported(model, device):
+        raise RuntimeError(
+            f"Quantized models run on CPU only; cannot benchmark on '{device}'. "
+            "PyTorch quantized ops (fbgemm/qnnpack) have no CUDA kernels."
+        )
+
+
 def _run_on_devices(
     compute_fn,                                          # single-device compute function
     model: torch.nn.Module,                              # model to benchmark
@@ -78,6 +113,9 @@ def _run_on_devices(
     """Run compute_fn on multiple devices with unified error handling.
     
     Returns dict mapping device string to metrics (or NaN metrics on failure).
+    Devices a model cannot run on (e.g. CUDA for a quantized model) are skipped
+    with NaN metrics — this avoids an uncatchable SIGSEGV from dispatching
+    CPU-only quantized ops on a CUDA tensor.
     """
     if devices is None:
         devices = _default_devices()
@@ -85,6 +123,13 @@ def _run_on_devices(
     out = {}
     for d in devices:
         d_str = str(d)
+        if not _device_supported(model, d):
+            warnings.warn(
+                f"{metric_name} benchmark skipped on {d}: quantized models run on "
+                "CPU only (PyTorch quantized ops have no CUDA kernels)."
+            )
+            out[d_str] = nan_factory(d_str)
+            continue
         try:
             out[d_str] = compute_fn(model, sample, device=d, **kwargs)
         except (RuntimeError, torch.cuda.OutOfMemoryError) as e:
