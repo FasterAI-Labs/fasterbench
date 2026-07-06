@@ -3,11 +3,14 @@
 # %% ../nbs/metrics/compute.ipynb #0091d170
 from __future__ import annotations
 
+import math
 import warnings
 from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
+
+from .core import _is_quantized
 
 try:
     from thop import profile as _thop_profile
@@ -40,6 +43,48 @@ class ComputeMetrics:
 
 
 #| export
+def _count_macs_hooks(
+    model: nn.Module,      # model to profile (run on CPU)
+    sample: torch.Tensor,  # input tensor (with batch dimension)
+) -> int:
+    """Count Conv2d/Linear MACs via forward hooks (fp *and* quantized modules).
+
+    thop has no handlers for quantized ops (it reports ~0), so we count manually.
+    Quantization does not change the number of multiply-accumulates: an int8 conv
+    does the same MACs as its fp32 twin. Uses module attributes (`out_channels`,
+    `kernel_size`, `in_features`, ...) which both fp and quantized modules expose,
+    and reads output spatial dims from the produced tensor.
+    """
+    macs = 0
+    handles = []
+
+    def conv_hook(m, inp, out):
+        nonlocal macs
+        out_spatial = math.prod(out.shape[2:])                       # out_H * out_W
+        kernel = math.prod(m.kernel_size)                            # kH * kW
+        macs += out.shape[0] * m.out_channels * (m.in_channels // m.groups) * kernel * out_spatial
+
+    def linear_hook(m, inp, out):
+        nonlocal macs
+        leading = out.numel() // m.out_features                      # batch/token dims
+        macs += leading * m.in_features * m.out_features
+
+    for m in model.modules():
+        if hasattr(m, "kernel_size") and hasattr(m, "out_channels") and hasattr(m, "groups"):
+            handles.append(m.register_forward_hook(conv_hook))
+        elif hasattr(m, "in_features") and hasattr(m, "out_features"):
+            handles.append(m.register_forward_hook(linear_hook))
+
+    try:
+        with torch.no_grad():
+            model(sample)
+    finally:
+        for h in handles:
+            h.remove()
+    return macs
+
+
+#| export
 def compute_compute(
     model: nn.Module,        # model to analyze
     sample: torch.Tensor,    # input tensor (with batch dimension)
@@ -54,6 +99,15 @@ def compute_compute(
         sample = sample.to(model_device)
 
     macs_m: float | None = None
+
+    # Quantized models: thop has no quantized-op handlers (returns ~0). Count the
+    # Conv2d/Linear MACs manually — quantization preserves the MAC count.
+    if _is_quantized(model):
+        try:
+            macs_m = round(_count_macs_hooks(model, sample) / 1e6, 3)
+        except Exception as e:
+            warnings.warn(f"quantized MAC counting failed: {e}")
+        return ComputeMetrics(macs_m=macs_m)
 
     if _thop_profile is not None:
         try:
