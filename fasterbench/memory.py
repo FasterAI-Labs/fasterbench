@@ -6,7 +6,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, asdict
 from typing import Sequence
-from .core import _bytes_to_mib, _run_on_devices
+from .core import _bytes_to_mib, _run_on_devices, _ensure_device_supported
 
 import numpy as np
 import torch
@@ -49,6 +49,7 @@ def _gpu_metrics(
 ) -> MemoryMetrics:
     """Measure GPU memory usage."""
     dev = torch.device("cuda")
+    _ensure_device_supported(model, dev)  # quantized ops are CPU-only; avoid SIGSEGV
     model = model.eval().to(dev)
     sample = sample.to(dev)
 

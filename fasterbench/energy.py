@@ -8,7 +8,7 @@ from typing import Sequence
 
 import torch
 
-from .core import _device_ctx, _sync, _run_on_devices
+from .core import _device_ctx, _sync, _run_on_devices, _ensure_device_supported
 
 try:
     from codecarbon import EmissionsTracker, OfflineEmissionsTracker
@@ -94,6 +94,7 @@ def compute_energy(
     )
 
     with _device_ctx(device) as dev:
+        _ensure_device_supported(model, dev)  # quantized ops are CPU-only; avoid SIGSEGV
         model = model.eval().to(dev)
         sample = sample.to(dev, non_blocking=True)
 
