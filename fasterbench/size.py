@@ -3,7 +3,7 @@
 # %% ../nbs/metrics/size.ipynb #4c37777e
 from __future__ import annotations
 
-from .core import _bytes_to_mib
+from .core import _bytes_to_mib, _is_quantized
 import torch
 import io
 from dataclasses import dataclass, asdict
@@ -23,14 +23,46 @@ def get_model_size(model: torch.nn.Module) -> int:  # model to measure
 
 
 #| export
+def _quantized_param_count(model: torch.nn.Module) -> int:  # model with quantized modules
+    """Sum the numel of packed quantized weights/biases (not in `.parameters()`).
+
+    Quantized `Conv2d`/`Linear` keep their weights in `_packed_params`, exposed via
+    a *callable* `.weight()`/`.bias()` accessor (unlike a plain `nn.Parameter`, which
+    is a tensor). Quantization preserves the number of parameters, so counting these
+    makes a quantized model's param count match its fp32 twin.
+    """
+    total = 0
+    for m in model.modules():
+        for name in ("weight", "bias"):
+            accessor = getattr(m, name, None)
+            if not callable(accessor):  # plain nn.Parameter tensors are not callable
+                continue
+            try:
+                t = accessor()
+                if t is not None:
+                    total += t.numel()
+            except Exception:
+                pass
+    return total
+
+
+#| export
 def get_num_parameters(
     model: torch.nn.Module,       # model to count parameters
     trainable_only: bool = True,  # if True, only count trainable parameters
 ) -> int:
-    """Count the number of (optionally trainable) parameters."""
+    """Count the number of (optionally trainable) parameters.
+
+    Quantized weights live in packed params outside `.parameters()`, so they are
+    added separately (regardless of `trainable_only`, as they are never trainable).
+    """
     if trainable_only:
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
-    return sum(p.numel() for p in model.parameters())
+        n = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        n = sum(p.numel() for p in model.parameters())
+    if _is_quantized(model):
+        n += _quantized_param_count(model)
+    return n
 
 
 #| export
