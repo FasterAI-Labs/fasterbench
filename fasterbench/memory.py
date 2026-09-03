@@ -6,7 +6,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, asdict
 from typing import Sequence
-from .core import _bytes_to_mib, _run_on_devices, _ensure_device_supported
+from .core import _bytes_to_mib, _on_device, _run_on_devices, _ensure_device_supported
 
 import numpy as np
 import torch
@@ -50,21 +50,21 @@ def _gpu_metrics(
     """Measure GPU memory usage."""
     dev = torch.device("cuda")
     _ensure_device_supported(model, dev)  # quantized ops are CPU-only; avoid SIGSEGV
-    model = model.eval().to(dev)
-    sample = sample.to(dev)
+    with _on_device(model.eval(), dev) as model:
+        sample = sample.to(dev)
 
-    for _ in range(warmup):
-        model(sample)
-    torch.cuda.synchronize(dev)
-
-    alloc, alloc_peak, reserv_peak = [], [], []
-    for _ in range(steps):
-        torch.cuda.reset_peak_memory_stats(dev)
-        model(sample)
+        for _ in range(warmup):
+            model(sample)
         torch.cuda.synchronize(dev)
-        alloc.append(torch.cuda.memory_allocated(dev))
-        alloc_peak.append(torch.cuda.max_memory_allocated(dev))
-        reserv_peak.append(torch.cuda.max_memory_reserved(dev))
+
+        alloc, alloc_peak, reserv_peak = [], [], []
+        for _ in range(steps):
+            torch.cuda.reset_peak_memory_stats(dev)
+            model(sample)
+            torch.cuda.synchronize(dev)
+            alloc.append(torch.cuda.memory_allocated(dev))
+            alloc_peak.append(torch.cuda.max_memory_allocated(dev))
+            reserv_peak.append(torch.cuda.max_memory_reserved(dev))
 
     return MemoryMetrics(
         avg_mib=_bytes_to_mib(float(np.mean(alloc))),
@@ -88,22 +88,22 @@ def _cpu_metrics(
         return _nan_memory_metrics("cpu")
 
     proc = psutil.Process()
-    model = model.eval().cpu()
-    sample = sample.cpu()
+    with _on_device(model.eval(), "cpu") as model:
+        sample = sample.cpu()
 
-    rss0 = proc.memory_info().rss
+        rss0 = proc.memory_info().rss
 
-    for _ in range(warmup):
-        model(sample)
+        for _ in range(warmup):
+            model(sample)
 
-    diffs: list[int] = []
-    peaks: list[int] = []
-    for _ in range(steps):
-        rss_before = proc.memory_info().rss
-        model(sample)
-        rss_after = proc.memory_info().rss
-        diffs.append(max(0, rss_after - rss_before))
-        peaks.append(max(0, rss_after - rss0))
+        diffs: list[int] = []
+        peaks: list[int] = []
+        for _ in range(steps):
+            rss_before = proc.memory_info().rss
+            model(sample)
+            rss_after = proc.memory_info().rss
+            diffs.append(max(0, rss_after - rss_before))
+            peaks.append(max(0, rss_after - rss0))
 
     return MemoryMetrics(
         avg_mib=_bytes_to_mib(float(np.mean(diffs))),

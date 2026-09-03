@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 import plotly.graph_objects as go
 
-from .core import _device_ctx, _sync, _fmt_float, _section
+from .core import _device_ctx, _on_device, _sync, _fmt_float, _section
 from .profiling import _leaf_modules, _tensor_bytes, _output_bytes
 
 # %% auto #0
@@ -304,32 +304,32 @@ class RooflineAnalyzer:
             if self.peaks is None:
                 self.peaks = measure_peaks(dev, dtype=self.sample.dtype)
 
-            model = self.model.eval().to(dev)
-            sample = self.sample.to(dev)
-            leaf_mods = _leaf_modules(model)
+            with _on_device(self.model.eval(), dev) as model:
+                sample = self.sample.to(dev)
+                leaf_mods = _leaf_modules(model)
 
-            bytes_state: dict[str, list] = {n: [] for n in leaf_mods}
-            time_state: dict[str, list] = {n: [] for n in leaf_mods}
-            flops_state: dict[str, list] = {n: [] for n in leaf_mods}
-            call_state: dict[str, int] = {n: 0 for n in leaf_mods}
+                bytes_state: dict[str, list] = {n: [] for n in leaf_mods}
+                time_state: dict[str, list] = {n: [] for n in leaf_mods}
+                flops_state: dict[str, list] = {n: [] for n in leaf_mods}
+                call_state: dict[str, int] = {n: 0 for n in leaf_mods}
 
-            handles = _setup_roofline_hooks(
-                leaf_mods, bytes_state, time_state, flops_state, call_state, dev.type,
-            )
-            try:
-                for _ in range(warmup):
-                    model(sample)
-                # Reset accumulators after warmup
-                for n in leaf_mods:
-                    bytes_state[n].clear()
-                    time_state[n].clear()
-                    flops_state[n].clear()
-                    call_state[n] = 0
-                for _ in range(steps):
-                    model(sample)
-            finally:
-                for h in handles:
-                    h.remove()
+                handles = _setup_roofline_hooks(
+                    leaf_mods, bytes_state, time_state, flops_state, call_state, dev.type,
+                )
+                try:
+                    for _ in range(warmup):
+                        model(sample)
+                    # Reset accumulators after warmup
+                    for n in leaf_mods:
+                        bytes_state[n].clear()
+                        time_state[n].clear()
+                        flops_state[n].clear()
+                        call_state[n] = 0
+                    for _ in range(steps):
+                        model(sample)
+                finally:
+                    for h in handles:
+                        h.remove()
 
             # Warn if any module was invoked >1x per forward pass (shared module)
             multi_call = [n for n, c in call_state.items() if steps > 0 and c > steps]
