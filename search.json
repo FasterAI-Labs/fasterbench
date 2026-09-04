@@ -1,0 +1,774 @@
+[
+  {
+    "objectID": "analysis/roofline.html",
+    "href": "analysis/roofline.html",
+    "title": "Roofline",
+    "section": "",
+    "text": "from fasterbench.roofline import RooflineAnalyzer\n\nra = RooflineAnalyzer(model, sample)\nra.profile(device=\"cuda\")\nra.summary()\nfig = ra.plot()\nfig.show()\nThis is a measurement primitive: it measures, it never prescribes. The decisions that consume ra.results live in the compression workflow that calls it.",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Roofline"
+    ]
+  },
+  {
+    "objectID": "analysis/roofline.html#usage",
+    "href": "analysis/roofline.html#usage",
+    "title": "Roofline",
+    "section": "",
+    "text": "from fasterbench.roofline import RooflineAnalyzer\n\nra = RooflineAnalyzer(model, sample)\nra.profile(device=\"cuda\")\nra.summary()\nfig = ra.plot()\nfig.show()\nThis is a measurement primitive: it measures, it never prescribes. The decisions that consume ra.results live in the compression workflow that calls it.",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Roofline"
+    ]
+  },
+  {
+    "objectID": "analysis/roofline.html#see-also",
+    "href": "analysis/roofline.html#see-also",
+    "title": "Roofline",
+    "section": "See Also",
+    "text": "See Also\n\nPer-layer profiling - Generic per-layer hook infrastructure reused here\nCompute metrics - Model-level FLOPs counting\nSpeed metrics - Latency measurement",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Roofline"
+    ]
+  },
+  {
+    "objectID": "analysis/benchmark.html",
+    "href": "analysis/benchmark.html",
+    "title": "Benchmark",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Benchmark"
+    ]
+  },
+  {
+    "objectID": "analysis/benchmark.html#see-also",
+    "href": "analysis/benchmark.html#see-also",
+    "title": "Benchmark",
+    "section": "See Also",
+    "text": "See Also\n\nGetting Started Tutorial - Comprehensive usage examples\nProfiling - Per-layer analysis with LayerProfiler\nVisualization - Radar plots for model comparison",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Benchmark"
+    ]
+  },
+  {
+    "objectID": "metrics/compute.html#see-also",
+    "href": "metrics/compute.html#see-also",
+    "title": "Compute",
+    "section": "See Also",
+    "text": "See Also\n\nSize — Model size measurement\nBenchmark — Unified API",
+    "crumbs": [
+      "Report an Issue",
+      "Metrics",
+      "Compute"
+    ]
+  },
+  {
+    "objectID": "metrics/memory.html#see-also",
+    "href": "metrics/memory.html#see-also",
+    "title": "Memory",
+    "section": "See Also",
+    "text": "See Also\n\nSpeed — Latency measurement\nBenchmark — Unified API",
+    "crumbs": [
+      "Report an Issue",
+      "Metrics",
+      "Memory"
+    ]
+  },
+  {
+    "objectID": "metrics/size.html#see-also",
+    "href": "metrics/size.html#see-also",
+    "title": "Size",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark - Unified benchmarking with benchmark()\nCompute - MACs and operation counts\nProfiling - Per-layer size analysis",
+    "crumbs": [
+      "Report an Issue",
+      "Metrics",
+      "Size"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html",
+    "href": "tutorials/report.html",
+    "title": "Benchmark Reports",
+    "section": "",
+    "text": "After compressing a model (pruning, quantization, sparsification), you want to know: how much did it actually improve? fasterbench’s ComparisonReport answers this by benchmarking both versions and generating a professional report with metric deltas, improvement rankings, and optional radar charts.\nThis tutorial shows the full workflow: benchmark → compress → benchmark again → generate report.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#introduction",
+    "href": "tutorials/report.html#introduction",
+    "title": "Benchmark Reports",
+    "section": "",
+    "text": "After compressing a model (pruning, quantization, sparsification), you want to know: how much did it actually improve? fasterbench’s ComparisonReport answers this by benchmarking both versions and generating a professional report with metric deltas, improvement rankings, and optional radar charts.\nThis tutorial shows the full workflow: benchmark → compress → benchmark again → generate report.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#setup",
+    "href": "tutorials/report.html#setup",
+    "title": "Benchmark Reports",
+    "section": "Setup",
+    "text": "Setup\n\nimport torch, torch.nn as nn\nfrom fasterbench import benchmark, Report, ComparisonReport",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#step-1-benchmark-the-original-model",
+    "href": "tutorials/report.html#step-1-benchmark-the-original-model",
+    "title": "Benchmark Reports",
+    "section": "Step 1: Benchmark the Original Model",
+    "text": "Step 1: Benchmark the Original Model\n\nfrom torchvision.models import resnet18\n\nmodel = resnet18(pretrained=True)\nx = torch.randn(1, 3, 224, 224)\n\nresult_before = benchmark(model, x, metrics=[\"size\", \"speed\", \"compute\"])\nresult_before.summary()\n\n/home/nathan/miniconda3/envs/dev/lib/python3.12/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.\n  warnings.warn(\n/home/nathan/miniconda3/envs/dev/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.\n  warnings.warn(msg)\n\n\n═══ Size ════════════════════════════════════\n  Disk:   44.67 MiB\n  Params: 11.69M\n═══ Speed ═══════════════════════════════════\n  cpu: 27.41 ms  │  36.5 inf/s  │  p99: 28.39 ms\n  cuda: 0.65 ms  │  1527.9 inf/s  │  p99: 0.70 ms\n═══ Compute ═════════════════════════════════\n  MACs: 1824.0 M",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#step-2-compress-the-model",
+    "href": "tutorials/report.html#step-2-compress-the-model",
+    "title": "Benchmark Reports",
+    "section": "Step 2: Compress the Model",
+    "text": "Step 2: Compress the Model\nUse any compression technique — pruning, quantization, sparsification:\n\n# Example: structured pruning with fasterai\nfrom fasterai.prune.pruner import Pruner\nfrom fasterai.core.criteria import large_final\n\npruner = Pruner(model, pruning_ratio=0.5, context='local', criteria=large_final,\n                example_inputs=x)\npruner.prune_model()\n\nIgnoring output layer: fc\nTotal ignored layers: 1\n\n\n\n---------------------------------------------------------------------------\nRuntimeError                              Traceback (most recent call last)\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch_pruning/dependency.py:796, in DependencyGraph._trace(self, model, example_inputs, forward_fn, output_transform)\n    795 try:\n--&gt; 796     out = model(*example_inputs)\n    797 except:\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1775, in Module._wrapped_call_impl(self, *args, **kwargs)\n   1774 else:\n-&gt; 1775     return self._call_impl(*args, **kwargs)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1786, in Module._call_impl(self, *args, **kwargs)\n   1783 if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks or self._forward_pre_hooks\n   1784         or _global_backward_pre_hooks or _global_backward_hooks\n   1785         or _global_forward_hooks or _global_forward_pre_hooks):\n-&gt; 1786     return forward_call(*args, **kwargs)\n   1788 result = None\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torchvision/models/resnet.py:285, in ResNet.forward(self, x)\n    284 def forward(self, x: Tensor) -&gt; Tensor:\n--&gt; 285     return self._forward_impl(x)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torchvision/models/resnet.py:268, in ResNet._forward_impl(self, x)\n    266 def _forward_impl(self, x: Tensor) -&gt; Tensor:\n    267     # See note [TorchScript super()]\n--&gt; 268     x = self.conv1(x)\n    269     x = self.bn1(x)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1775, in Module._wrapped_call_impl(self, *args, **kwargs)\n   1774 else:\n-&gt; 1775     return self._call_impl(*args, **kwargs)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1881, in Module._call_impl(self, *args, **kwargs)\n   1880 try:\n-&gt; 1881     return inner()\n   1882 except Exception:\n   1883     # run always called hooks if they have not already been run\n   1884     # For now only forward hooks have the always_call option but perhaps\n   1885     # this functionality should be added to full backward hooks as well.\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1829, in Module._call_impl.&lt;locals&gt;.inner()\n   1827     args = bw_hook.setup_input_hook(args)\n-&gt; 1829 result = forward_call(*args, **kwargs)\n   1830 if _global_forward_hooks or self._forward_hooks:\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/conv.py:548, in Conv2d.forward(self, input)\n    547 def forward(self, input: Tensor) -&gt; Tensor:\n--&gt; 548     return self._conv_forward(input, self.weight, self.bias)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/conv.py:543, in Conv2d._conv_forward(self, input, weight, bias)\n    532     return F.conv2d(\n    533         F.pad(\n    534             input, self._reversed_padding_repeated_twice, mode=self.padding_mode\n   (...)    541         self.groups,\n    542     )\n--&gt; 543 return F.conv2d(\n    544     input, weight, bias, self.stride, self.padding, self.dilation, self.groups\n    545 )\n\nRuntimeError: Inference tensors cannot be saved for backward. Please do not use Tensors created in inference mode in computation tracked by autograd. To work around this, you can make a clone to get a normal tensor and use it in autograd, or use `torch.no_grad()` instead of `torch.inference_mode()`.\n\nDuring handling of the above exception, another exception occurred:\n\nRuntimeError                              Traceback (most recent call last)\nCell In[3], line 5\n      2 from fasterai.prune.pruner import Pruner\n      3 from fasterai.core.criteria import large_final\n----&gt; 5 pruner = Pruner(model, pruning_ratio=0.5, context='local', criteria=large_final,\n      6                 example_inputs=x)\n      7 pruner.prune_model()\n\nFile ~/Developer/FasterAI-Labs/gh/fasterai/fasterai/prune/pruner.py:53, in Pruner.__init__(self, model, pruning_ratio, context, criteria, schedule, ignored_layers, example_inputs, *args, **kwargs)\n     50 # Clone example_inputs to escape inference mode (torch-pruning needs autograd for tracing)\n     51 _example_inputs = self.example_inputs.clone().to(next(self.model.parameters()).device)\n---&gt; 53 self.pruner = tp.pruner.MetaPruner(\n     54     self.model,\n     55     example_inputs=_example_inputs,\n     56     importance=self.group_importance,\n     57     pruning_ratio=self.default_pruning_ratio,\n     58     pruning_ratio_dict=self.pruning_ratio_dict,\n     59     ignored_layers=self.ignored_layers,\n     60     global_pruning=True if self.context=='global' else False,\n     61     num_heads=self.num_heads,\n     62     iterative_pruning_ratio_scheduler=tp_schedule,\n     63     *args,\n     64     **kwargs\n     65 )\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch_pruning/pruner/algorithms/base_pruner.py:133, in BasePruner.__init__(self, model, example_inputs, importance, global_pruning, pruning_ratio, pruning_ratio_dict, max_pruning_ratio, iterative_steps, iterative_pruning_ratio_scheduler, ignored_layers, round_to, isomorphic, in_channel_groups, out_channel_groups, num_heads, prune_num_heads, prune_head_dims, head_pruning_ratio, head_pruning_ratio_dict, customized_pruners, unwrapped_parameters, root_module_types, forward_fn, output_transform, channel_groups, ch_sparsity, ch_sparsity_dict)\n    129             self.ignored_params.append(layer)\n    131 ###############################################\n    132 # Build dependency graph\n--&gt; 133 self.DG = dependency.DependencyGraph().build_dependency(\n    134     model,\n    135     example_inputs=example_inputs,\n    136     forward_fn=forward_fn,\n    137     output_transform=output_transform,\n    138     unwrapped_parameters=unwrapped_parameters,\n    139     customized_pruners=customized_pruners,\n    140     ignored_params=self.ignored_params,\n    141 )\n    143 ###############################################\n    144 # Iterative pruning\n    145 # The pruner will prune the model iteratively for several steps to achieve the target pruning ratio\n    146 # E.g., if iterative_steps=5, pruning_ratio=0.5, the pruning ratio of each step will be [0.1, 0.2, 0.3, 0.4, 0.5]\n    147 self.iterative_steps = iterative_steps\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch_pruning/dependency.py:388, in DependencyGraph.build_dependency(self, model, example_inputs, forward_fn, output_transform, unwrapped_parameters, customized_pruners, ignored_layers, ignored_params, verbose)\n    385 assert torch.is_grad_enabled(), \"Dependency graph relies on autograd for tracing. Please check and disable the torch.no_grad() in your code.\"\n    387 # Build computational graph through tracing. \n--&gt; 388 self.module2node = self._trace(\n    389     model, example_inputs, forward_fn, output_transform=output_transform\n    390 )\n    392 # Build dependency graph\n    393 self._build_dependency(self.module2node)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch_pruning/dependency.py:798, in DependencyGraph._trace(self, model, example_inputs, forward_fn, output_transform)\n    796         out = model(*example_inputs)\n    797     except:\n--&gt; 798         out = model(example_inputs)\n    799 for hook in hooks:\n    800     hook.remove()\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1775, in Module._wrapped_call_impl(self, *args, **kwargs)\n   1773     return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]\n   1774 else:\n-&gt; 1775     return self._call_impl(*args, **kwargs)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1786, in Module._call_impl(self, *args, **kwargs)\n   1781 # If we don't have any hooks, we want to skip the rest of the logic in\n   1782 # this function, and just call forward.\n   1783 if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks or self._forward_pre_hooks\n   1784         or _global_backward_pre_hooks or _global_backward_hooks\n   1785         or _global_forward_hooks or _global_forward_pre_hooks):\n-&gt; 1786     return forward_call(*args, **kwargs)\n   1788 result = None\n   1789 called_always_called_hooks = set()\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torchvision/models/resnet.py:285, in ResNet.forward(self, x)\n    284 def forward(self, x: Tensor) -&gt; Tensor:\n--&gt; 285     return self._forward_impl(x)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torchvision/models/resnet.py:268, in ResNet._forward_impl(self, x)\n    266 def _forward_impl(self, x: Tensor) -&gt; Tensor:\n    267     # See note [TorchScript super()]\n--&gt; 268     x = self.conv1(x)\n    269     x = self.bn1(x)\n    270     x = self.relu(x)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1775, in Module._wrapped_call_impl(self, *args, **kwargs)\n   1773     return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]\n   1774 else:\n-&gt; 1775     return self._call_impl(*args, **kwargs)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1881, in Module._call_impl(self, *args, **kwargs)\n   1878     return inner()\n   1880 try:\n-&gt; 1881     return inner()\n   1882 except Exception:\n   1883     # run always called hooks if they have not already been run\n   1884     # For now only forward hooks have the always_call option but perhaps\n   1885     # this functionality should be added to full backward hooks as well.\n   1886     for hook_id, hook in _global_forward_hooks.items():\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/module.py:1829, in Module._call_impl.&lt;locals&gt;.inner()\n   1826     bw_hook = BackwardHook(self, full_backward_hooks, backward_pre_hooks)\n   1827     args = bw_hook.setup_input_hook(args)\n-&gt; 1829 result = forward_call(*args, **kwargs)\n   1830 if _global_forward_hooks or self._forward_hooks:\n   1831     for hook_id, hook in (\n   1832         *_global_forward_hooks.items(),\n   1833         *self._forward_hooks.items(),\n   1834     ):\n   1835         # mark that always called hook is run\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/conv.py:548, in Conv2d.forward(self, input)\n    547 def forward(self, input: Tensor) -&gt; Tensor:\n--&gt; 548     return self._conv_forward(input, self.weight, self.bias)\n\nFile ~/miniconda3/envs/dev/lib/python3.12/site-packages/torch/nn/modules/conv.py:543, in Conv2d._conv_forward(self, input, weight, bias)\n    531 if self.padding_mode != \"zeros\":\n    532     return F.conv2d(\n    533         F.pad(\n    534             input, self._reversed_padding_repeated_twice, mode=self.padding_mode\n   (...)    541         self.groups,\n    542     )\n--&gt; 543 return F.conv2d(\n    544     input, weight, bias, self.stride, self.padding, self.dilation, self.groups\n    545 )\n\nRuntimeError: Inference tensors cannot be saved for backward. Please do not use Tensors created in inference mode in computation tracked by autograd. To work around this, you can make a clone to get a normal tensor and use it in autograd, or use `torch.no_grad()` instead of `torch.inference_mode()`.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#step-3-benchmark-the-compressed-model",
+    "href": "tutorials/report.html#step-3-benchmark-the-compressed-model",
+    "title": "Benchmark Reports",
+    "section": "Step 3: Benchmark the Compressed Model",
+    "text": "Step 3: Benchmark the Compressed Model\n\nresult_after = benchmark(model, x, metrics=[\"size\", \"speed\", \"compute\"])\nresult_after.summary()",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#step-4-generate-comparison-report",
+    "href": "tutorials/report.html#step-4-generate-comparison-report",
+    "title": "Benchmark Reports",
+    "section": "Step 4: Generate Comparison Report",
+    "text": "Step 4: Generate Comparison Report\n\nreport = ComparisonReport(\n    result_before, result_after,\n    before_name=\"ResNet-18 (original)\",\n    after_name=\"ResNet-18 (50% pruned)\",\n    title=\"Pruning Compression Report\"\n)\n\nreport.summary()",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#export-to-html-or-markdown",
+    "href": "tutorials/report.html#export-to-html-or-markdown",
+    "title": "Benchmark Reports",
+    "section": "Export to HTML or Markdown",
+    "text": "Export to HTML or Markdown\nGenerate shareable reports:\n\n# HTML report with embedded radar chart\nreport.to_html(\"compression_report.html\", include_charts=True)\n\n# Markdown report (great for GitHub PRs)\nmd = report.to_markdown(\"compression_report.md\")\nprint(md[:200])",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#single-model-report",
+    "href": "tutorials/report.html#single-model-report",
+    "title": "Benchmark Reports",
+    "section": "Single Model Report",
+    "text": "Single Model Report\nReport generates a standalone report for a single model:\n\nsingle = Report(result_before, model_name=\"ResNet-18\", \n               description=\"Baseline ImageNet classifier\")\nsingle.summary()\n\n# Also supports HTML and Markdown export\nsingle.to_html(\"resnet18_report.html\")",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#programmatic-access",
+    "href": "tutorials/report.html#programmatic-access",
+    "title": "Benchmark Reports",
+    "section": "Programmatic Access",
+    "text": "Programmatic Access\nAccess report data as dictionaries for further processing:\n\n# Get all deltas as a list\nfor d in report.deltas:\n    if d.improved:\n        print(f\"{d.label}: {d.delta_pct:+.1f}% ({'improved' if d.improved else 'regressed'})\")\n\n# Top 3 improvements\nfor d in report.top_improvements(3):\n    print(f\"  {d.label}: {d.before:.0f} → {d.after:.0f}\")\n\n# Serialize to dict (for JSON, databases, etc.)\ndata = report.as_dict()",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#summary",
+    "href": "tutorials/report.html#summary",
+    "title": "Benchmark Reports",
+    "section": "Summary",
+    "text": "Summary\n\n\n\nTool / Function\nPurpose\n\n\n\n\nReport(result)\nSingle model report\n\n\nComparisonReport(before, after)\nBefore/after comparison\n\n\n.summary()\nConsole output\n\n\n.to_html(path)\nHTML with radar charts\n\n\n.to_markdown(path)\nMarkdown (great for PRs)\n\n\n.deltas\nList of ReportMetricDelta\n\n\n.top_improvements(n)\nTop N improvements sorted by impact",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/report.html#see-also",
+    "href": "tutorials/report.html#see-also",
+    "title": "Benchmark Reports",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark — Unified benchmarking API\nVisualization — Radar plots for visual comparison\nReport API — Full API reference",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Reports"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html",
+    "href": "tutorials/profiling.html",
+    "title": "Profiling Tutorial",
+    "section": "",
+    "text": "When optimizing models, you need to know which layers are the bottlenecks. This tutorial covers advanced profiling techniques in fasterbench for identifying performance issues:\n\n\n\n\n\n\n\nTool\nUse Case\n\n\n\n\nLayerProfiler\nUnified per-layer analysis (speed, memory, size, compute)\n\n\nsweep_batch_sizes()\nFind optimal batch size for throughput\n\n\nsweep_threads()\nFind optimal CPU thread count\n\n\nsweep_latency()\nAnalyze latency vs input resolution",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#overview",
+    "href": "tutorials/profiling.html#overview",
+    "title": "Profiling Tutorial",
+    "section": "",
+    "text": "When optimizing models, you need to know which layers are the bottlenecks. This tutorial covers advanced profiling techniques in fasterbench for identifying performance issues:\n\n\n\n\n\n\n\nTool\nUse Case\n\n\n\n\nLayerProfiler\nUnified per-layer analysis (speed, memory, size, compute)\n\n\nsweep_batch_sizes()\nFind optimal batch size for throughput\n\n\nsweep_threads()\nFind optimal CPU thread count\n\n\nsweep_latency()\nAnalyze latency vs input resolution",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#layerprofiler-unified-per-layer-analysis",
+    "href": "tutorials/profiling.html#layerprofiler-unified-per-layer-analysis",
+    "title": "Profiling Tutorial",
+    "section": "1. LayerProfiler: Unified Per-Layer Analysis",
+    "text": "1. LayerProfiler: Unified Per-Layer Analysis\nThe LayerProfiler class provides a unified interface for profiling multiple metrics per layer. This is the recommended approach for comprehensive layer-level analysis.\n\nimport torch\nimport pandas as pd\nfrom torchvision.models import resnet18\nfrom fasterbench.profiling import LayerProfiler\n\nmodel = resnet18()\ndummy = torch.randn(1, 3, 224, 224)\n\n# Create profiler\nprofiler = LayerProfiler(model, dummy)\n\n# Profile multiple metrics at once\nresults = profiler.profile([\"speed\", \"size\", \"memory\"], device=\"cpu\", warmup=3, steps=10)\n\n\nAvailable Metrics\n\n\n\n\n\n\n\n\nMetric\nColumns Added\nDescription\n\n\n\n\nspeed\nspeed_ms, speed_percent\nForward pass latency per layer\n\n\nmemory\nmemory_mib, memory_percent\nOutput tensor size (activation memory)\n\n\nsize\nparams, params_percent\nParameter count per layer\n\n\ncompute\nmacs, macs_percent\nMACs per layer (requires torchprofile)\n\n\n\n\n\nUtility Methods: top() and summary()\nThe LayerProfiler provides convenient methods to quickly identify bottlenecks after profiling:\n\n# Get top 5 slowest layers\nprint(\"Top 5 slowest layers:\")\nfor r in profiler.top(\"speed\", n=5):\n    print(f\"  {r['name']:30} {r['speed_ms']:.3f} ms ({r['speed_percent']:.1f}%)\")\n\n# Get top 5 fastest layers (ascending order)\nprint(\"\\nTop 5 fastest layers:\")\nfor r in profiler.top(\"speed\", n=5, ascending=True):\n    print(f\"  {r['name']:30} {r['speed_ms']:.3f} ms\")\n\n# Get layers with most parameters\nprint(\"\\nTop 5 layers by parameter count:\")\nfor r in profiler.top(\"size\", n=5):\n    print(f\"  {r['name']:30} {r['params']:&gt;12,} params\")\n\nTop 5 slowest layers:\n  layer4.0.conv2                 0.503 ms (6.8%)\n  layer4.1.conv1                 0.498 ms (6.7%)\n  layer4.1.conv2                 0.494 ms (6.6%)\n  layer3.0.conv2                 0.346 ms (4.6%)\n  layer3.1.conv1                 0.345 ms (4.6%)\n\nTop 5 fastest layers:\n  layer4.0.relu                  0.011 ms\n  layer4.1.relu                  0.011 ms\n  layer3.0.relu                  0.012 ms\n  layer3.1.relu                  0.013 ms\n  layer2.0.relu                  0.013 ms\n\nTop 5 layers by parameter count:\n  layer4.0.conv2                  2,359,296.0 params\n  layer4.1.conv1                  2,359,296.0 params\n  layer4.1.conv2                  2,359,296.0 params\n  layer4.0.conv1                  1,179,648.0 params\n  layer3.0.conv2                    589,824.0 params\n\n\n\n# Print formatted summary of all profiled metrics\nprofiler.summary(top=10)\n\n═══ Speed (slowest) ═══════════════════════════════════════\n  layer4.0.conv2                           Conv2d             0.503 ms (  6.8%)\n  layer4.1.conv1                           Conv2d             0.498 ms (  6.7%)\n  layer4.1.conv2                           Conv2d             0.494 ms (  6.6%)\n  layer3.0.conv2                           Conv2d             0.346 ms (  4.6%)\n  layer3.1.conv1                           Conv2d             0.345 ms (  4.6%)\n  layer3.1.conv2                           Conv2d             0.340 ms (  4.6%)\n  conv1                                    Conv2d             0.337 ms (  4.5%)\n  maxpool                                  MaxPool2d          0.330 ms (  4.4%)\n  layer1.0.conv1                           Conv2d             0.328 ms (  4.4%)\n  layer2.0.conv2                           Conv2d             0.322 ms (  4.3%)\n\n═══ Parameters (largest) ══════════════════════════════════\n  layer4.0.conv2                           Conv2d             2,359,296 ( 20.2%)\n  layer4.1.conv1                           Conv2d             2,359,296 ( 20.2%)\n  layer4.1.conv2                           Conv2d             2,359,296 ( 20.2%)\n  layer4.0.conv1                           Conv2d             1,179,648 ( 10.1%)\n  layer3.0.conv2                           Conv2d               589,824 (  5.0%)\n  layer3.1.conv1                           Conv2d               589,824 (  5.0%)\n  layer3.1.conv2                           Conv2d               589,824 (  5.0%)\n  fc                                       Linear               513,000 (  4.4%)\n  layer3.0.conv1                           Conv2d               294,912 (  2.5%)\n  layer2.0.conv2                           Conv2d               147,456 (  1.3%)\n\n═══ Memory (largest) ══════════════════════════════════════\n  conv1                                    Conv2d             3.062 MiB ( 11.9%)\n  bn1                                      BatchNorm2d        3.062 MiB ( 11.9%)\n  relu                                     ReLU               3.062 MiB ( 11.9%)\n  maxpool                                  MaxPool2d          0.766 MiB (  3.0%)\n  layer1.0.conv1                           Conv2d             0.766 MiB (  3.0%)\n  layer1.1.conv2                           Conv2d             0.766 MiB (  3.0%)\n  layer1.1.conv1                           Conv2d             0.766 MiB (  3.0%)\n  layer1.0.conv2                           Conv2d             0.766 MiB (  3.0%)\n  layer1.0.bn1                             BatchNorm2d        0.766 MiB (  3.0%)\n  layer1.1.bn1                             BatchNorm2d        0.766 MiB (  3.0%)",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#batch-size-sweeping",
+    "href": "tutorials/profiling.html#batch-size-sweeping",
+    "title": "Profiling Tutorial",
+    "section": "2. Batch Size Sweeping",
+    "text": "2. Batch Size Sweeping\nFind the optimal batch size for maximum throughput. Larger batches improve GPU utilization but eventually hit memory limits.\n\nfrom fasterbench import sweep_batch_sizes\n\nif torch.cuda.is_available():\n    results = sweep_batch_sizes(\n        model,\n        input_shape=(3, 224, 224),  # Shape WITHOUT batch dimension\n        batch_sizes=[1, 2, 4, 8, 16, 32],\n        device=\"cuda\",\n        warmup=10,\n        steps=50\n    )\n    \n    print(\"Batch Size Analysis:\")\n    print(\"-\" * 60)\n    print(f\"{'Batch':&gt;6} {'Latency':&gt;10} {'Per-Sample':&gt;12} {'Throughput':&gt;12}\")\n    print(f\"{'Size':&gt;6} {'(ms)':&gt;10} {'(ms)':&gt;12} {'(inf/s)':&gt;12}\")\n    print(\"-\" * 60)\n    for r in results:\n        if 'throughput_s' in r and not pd.isna(r.get('mean_ms')):\n            print(f\"{r['batch_size']:&gt;6} {r['mean_ms']:&gt;10.2f} {r['latency_per_sample_ms']:&gt;12.3f} {r['throughput_s']:&gt;12.1f}\")\n\nBatch Size Analysis:\n------------------------------------------------------------\n Batch    Latency   Per-Sample   Throughput\n  Size       (ms)         (ms)      (inf/s)\n------------------------------------------------------------\n     1       0.69        0.687       1455.3\n     2       0.72        0.362       2760.6\n     4       0.87        0.218       4582.8\n     8       1.06        0.133       7530.9\n    16       1.33        0.083      11988.0\n    32       2.54        0.079      12605.3",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#thread-count-sweeping-cpu",
+    "href": "tutorials/profiling.html#thread-count-sweeping-cpu",
+    "title": "Profiling Tutorial",
+    "section": "3. Thread Count Sweeping (CPU)",
+    "text": "3. Thread Count Sweeping (CPU)\nFor CPU inference, the number of threads significantly impacts performance. More threads isn’t always better due to contention.\n\nfrom fasterbench import sweep_threads\nimport os\n\nnum_cores = os.cpu_count()\nthread_counts = [t for t in [1, 2, 4, 8, 16, 32] if t &lt;= num_cores]\n\nresults = sweep_threads(model, dummy, thread_counts=thread_counts, warmup=10, steps=30)\n\nprint(\"Thread Count Analysis:\")\nprint(\"-\" * 50)\nprint(f\"{'Threads':&gt;8} {'Latency (ms)':&gt;15} {'Throughput':&gt;15}\")\nprint(\"-\" * 50)\nfor r in results:\n    print(f\"{r['threads']:&gt;8} {r['mean_ms']:&gt;15.2f} {r['throughput_s']:&gt;15.1f}\")\n\nThread Count Analysis:\n--------------------------------------------------\n Threads    Latency (ms)      Throughput\n--------------------------------------------------\n       1           30.66            32.6\n       2           29.59            33.8\n       4           29.16            34.3\n       8           33.89            29.5\n      16           29.92            33.4\n      32           31.37            31.9",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#input-resolution-sweeping",
+    "href": "tutorials/profiling.html#input-resolution-sweeping",
+    "title": "Profiling Tutorial",
+    "section": "4. Input Resolution Sweeping",
+    "text": "4. Input Resolution Sweeping\nFor vision models, latency scales with input resolution. Use this to find the right speed/accuracy trade-off:\n\nfrom fasterbench import sweep_latency\n\nshapes = [\n    (1, 3, 128, 128),\n    (1, 3, 224, 224),\n    (1, 3, 384, 384),\n    (1, 3, 512, 512),\n]\n\nresults = sweep_latency(model, shapes, device=\"cpu\", warmup=5, steps=20)\n\nprint(\"Resolution Analysis:\")\nprint(\"-\" * 50)\nprint(f\"{'Shape':&gt;20} {'Latency (ms)':&gt;15} {'Throughput':&gt;12}\")\nprint(\"-\" * 50)\nfor r in results:\n    print(f\"{r['shape']:&gt;20} {r['mean_ms']:&gt;15.2f} {r['throughput_s']:&gt;12.1f}\")\n\nResolution Analysis:\n--------------------------------------------------\n               Shape    Latency (ms)   Throughput\n--------------------------------------------------\n         1×3×128×128           12.18         82.1\n         1×3×224×224           32.76         30.5\n         1×3×384×384          167.54          6.0\n         1×3×512×512          438.43          2.3",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#summary",
+    "href": "tutorials/profiling.html#summary",
+    "title": "Profiling Tutorial",
+    "section": "Summary",
+    "text": "Summary\n\n\n\nTool\nUse Case\n\n\n\n\nLayerProfiler\nComprehensive per-layer analysis (speed, memory, size, compute)\n\n\nLayerProfiler.top()\nGet top N layers sorted by any metric\n\n\nLayerProfiler.summary()\nPrint formatted summary of all metrics\n\n\nsweep_batch_sizes()\nFind optimal batch size for throughput\n\n\nsweep_threads()\nFind optimal CPU thread count\n\n\nsweep_latency()\nAnalyze latency vs input resolution",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/profiling.html#see-also",
+    "href": "tutorials/profiling.html#see-also",
+    "title": "Profiling Tutorial",
+    "section": "See Also",
+    "text": "See Also\n\nGetting Started Tutorial - Basic benchmarking with benchmark()\nSensitivity Analysis - Analyze layer importance for pruning\nProfiling API - Full LayerProfiler reference\nSpeed Metrics - Detailed speed measurement options",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Profiling Tutorial"
+    ]
+  },
+  {
+    "objectID": "core/utils.html#see-also",
+    "href": "core/utils.html#see-also",
+    "title": "Utils",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark — Main benchmarking API",
+    "crumbs": [
+      "Report an Issue",
+      "Core",
+      "Utils"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "fasterbench",
+    "section": "",
+    "text": "from fasterbench.benchmark import benchmark, BenchmarkResult\nfrom fasterbench.size import SizeMetrics, compute_size, get_model_size, get_num_parameters\nfrom fasterbench.speed import (\n    SpeedMetrics, compute_speed, compute_speed_multi, \n    sweep_threads, sweep_latency, sweep_batch_sizes,\n)\nfrom fasterbench.profiling import LayerProfiler\nfrom fasterbench.compute import ComputeMetrics, compute_compute\nfrom fasterbench.memory import MemoryMetrics, compute_memory, compute_memory_multi\nfrom fasterbench.energy import EnergyMetrics, compute_energy, compute_energy_multi\nfrom fasterbench.roofline import (\n    HardwarePeaks, RooflinePoint, measure_peaks, clear_peaks_cache, RooflineAnalyzer,\n)\nfrom fasterbench.plot import create_radar_plot, SPECS\nfrom fasterbench.utils import parse_metric_value\n\n__all__ = [\n    # Main entry point\n    'benchmark', 'BenchmarkResult',\n    # Size\n    'SizeMetrics', 'compute_size', 'get_model_size', 'get_num_parameters',\n    # Speed\n    'SpeedMetrics', 'compute_speed', 'compute_speed_multi', \n    'sweep_threads', 'sweep_latency', 'sweep_batch_sizes',\n    # Profiling\n    'LayerProfiler',\n    # Compute\n    'ComputeMetrics', 'compute_compute',\n    # Memory\n    'MemoryMetrics', 'compute_memory', 'compute_memory_multi',\n    # Energy\n    'EnergyMetrics', 'compute_energy', 'compute_energy_multi',\n    # Roofline\n    'HardwarePeaks', 'RooflinePoint', 'measure_peaks', 'clear_peaks_cache', 'RooflineAnalyzer',\n    # Plot\n    'create_radar_plot', 'SPECS',\n    # Report\n    'Report', 'ComparisonReport', 'ReportMetricDelta',\n    # Utils\n    'parse_metric_value',\n]\nfrom fasterbench.report import Report, ComparisonReport, ReportMetricDelta",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "fasterbench",
+    "section": "Overview",
+    "text": "Overview\nfasterbench is a comprehensive benchmarking library for PyTorch models that helps AI researchers and engineers evaluate model performance across five critical dimensions:\n\nSize: Model disk size and parameter count\nSpeed: Latency and throughput on both GPU and CPU\nCompute: MACs (multiply-accumulate operations)\nMemory: Peak and average memory consumption\nEnergy: Power consumption and carbon emissions\n\nWhether you’re optimizing for edge deployment, comparing model architectures, or researching model efficiency, FasterBench provides the metrics you need with minimal setup.",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "fasterbench",
+    "section": "Installation",
+    "text": "Installation\npip install fasterbench",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "fasterbench",
+    "section": "Quick Start",
+    "text": "Quick Start\nimport torch\nfrom torchvision.models import resnet18\nfrom fasterbench import benchmark\n\n# Load your model\nmodel = resnet18()\ndummy_input = torch.randn(1, 3, 224, 224)\n\n# Run comprehensive benchmarks\nresult = benchmark(model, dummy_input, metrics=[\"size\", \"speed\", \"compute\"])\n\n# Typed access (IDE autocomplete!)\nprint(f\"Size: {result.size.size_mib:.2f} MiB\")\nprint(f\"Params: {result.size.num_params:,}\")\nprint(f\"CPU Latency: {result.speed['cpu'].mean_ms:.2f} ms\")\nprint(f\"MACs: {result.compute.macs_m}M\")\n\n# Backward-compatible dict access still works\nprint(result[\"size_disk_bytes\"])",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#features",
+    "href": "index.html#features",
+    "title": "fasterbench",
+    "section": "Features",
+    "text": "Features\n\nBenchmarkResult: Typed Access + Backward Compatibility\nThe benchmark() function returns a BenchmarkResult object with both typed attribute access and dict-like access:\nresult = benchmark(model, dummy_input, metrics=[\"size\", \"speed\", \"compute\"])\n\n# Typed access - IDE autocomplete and type checking\nresult.size.size_mib          # 44.59\nresult.size.num_params        # 11689512\nresult.speed[\"cpu\"].mean_ms   # 45.23\nresult.speed[\"cpu\"].throughput_s  # 22.1\nresult.compute.macs_m         # 1819.066\nresult.compute.macs_available # True (False if MACs couldn't be computed)\n\n# Dict access - backward compatible with existing code\nresult[\"size_size_mib\"]       # 44.59\nresult[\"speed_cpu_mean_ms\"]   # 45.23\nfor key, value in result.items():\n    print(f\"{key}: {value}\")\n\n\nHuman-Readable Summary\nGet a quick overview with formatted output:\nresult.summary()  # prints directly\n═══ Size ════════════════════════════════════\n  Disk:   44.59 MiB\n  Params: 11.69M\n═══ Speed ═══════════════════════════════════\n  cpu: 45.23 ms  │  22.1 inf/s  │  p99: 48.12 ms\n═══ Compute ═════════════════════════════════\n  MACs:   1819.1 M\n  Params: 11.69 M\n\n\nExport to DataFrame or JSON\n# Convert to pandas DataFrame for analysis\ndf = result.to_dataframe()\ndf.to_csv(\"benchmark_results.csv\")\n\n# Serialize to JSON\njson_str = result.to_json()\n\n# Get formatted string (for logging, etc.)\nsummary_str = str(result)\n\n\nSelective Metrics\nOnly compute what you need:\n# Fast: just size and compute (no inference runs)\nresult = benchmark(model, dummy_input, metrics=[\"size\", \"compute\"])\n\n# Full benchmark on specific devices\nresult = benchmark(model, dummy_input, \n                   speed_devices=[\"cpu\", \"cuda\"],\n                   memory_devices=[\"cuda\"])\n\n\nIndividual Metric Functions\nFor fine-grained control, use the individual compute functions:\nfrom fasterbench import compute_size, compute_speed_multi, compute_compute\n\n# Size metrics\nsize = compute_size(model)\nprint(f\"Disk Size: {size.size_mib:.2f} MiB\")\nprint(f\"Parameters: {size.num_params:,}\")\n\n# Speed metrics across devices\nspeed = compute_speed_multi(model, dummy_input)\nfor device, metrics in speed.items():\n    print(f\"{device}: {metrics.mean_ms:.2f}ms, {metrics.throughput_s:.1f} inf/s\")\n\n# Compute metrics (MACs)\ncompute = compute_compute(model, dummy_input)\nif compute.macs_available:\n    print(f\"MACs: {compute.macs_m}M\")\n\n\nMemory Metrics\nProfile memory usage on CPU and GPU:\nfrom fasterbench import compute_memory_multi\n\nmemory = compute_memory_multi(model, dummy_input)\nfor device, metrics in memory.items():\n    print(f\"{device} peak: {metrics.peak_mib:.2f} MiB\")\n\n\nEnergy Metrics\nMeasure power consumption and carbon footprint (requires codecarbon):\nfrom fasterbench import compute_energy_multi\n\nenergy = compute_energy_multi(model, dummy_input)\nfor device, metrics in energy.items():\n    print(f\"{device}: {metrics.mean_watts:.1f}W, {metrics.co2_eq_g:.4f}g CO₂/inf\")\n\n\nThread Sweep for CPU Optimization\nFind the optimal thread count for CPU inference:\nfrom fasterbench import sweep_threads\n\nresults = sweep_threads(model, dummy_input, thread_counts=[1, 2, 4, 8])\nfor r in results:\n    print(f\"{r['threads']} threads: {r['mean_ms']:.2f}ms\")\n\n\nVisualize Results\nCreate radar plots to compare multiple models:\nfrom fasterbench.benchmark import benchmark\nfrom fasterbench.plot import *\nfrom torchvision.models import resnet18, mobilenet_v3_large\nimport torch\n\ndummy = torch.randn(8,3,224,224)\n\nresnet   = benchmark(resnet18(),            dummy,\n                     metrics=(\"size\",\"speed\",\"compute\",\"energy\"))\nmobilenet= benchmark(mobilenet_v3_large(),  dummy,\n                     metrics=(\"size\",\"speed\",\"compute\",\"energy\"))\nfig = create_radar_plot([resnet, mobilenet],\n                        model_names=[\"ResNet-18\", \"MobileNet-V3\"])\nfig.show()",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#documentation",
+    "href": "index.html#documentation",
+    "title": "fasterbench",
+    "section": "Documentation",
+    "text": "Documentation\nFor more detailed usage examples and API documentation, visit our documentation.",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#contributing",
+    "href": "index.html#contributing",
+    "title": "fasterbench",
+    "section": "Contributing",
+    "text": "Contributing\nContributions are welcome! Please feel free to submit a Pull Request.",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "fasterbench",
+    "section": "License",
+    "text": "License\nThis project is licensed under the Apache 2.0 License - see the LICENSE file for details.",
+    "crumbs": [
+      "Report an Issue",
+      "fasterbench"
+    ]
+  },
+  {
+    "objectID": "visualization/plot.html#see-also",
+    "href": "visualization/plot.html#see-also",
+    "title": "Visualization",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark — Unified API\nReport — Formatted reports",
+    "crumbs": [
+      "Report an Issue",
+      "Visualization",
+      "Visualization"
+    ]
+  },
+  {
+    "objectID": "core/core.html#see-also",
+    "href": "core/core.html#see-also",
+    "title": "Core",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark — Main benchmarking API",
+    "crumbs": [
+      "Report an Issue",
+      "Core",
+      "Core"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html",
+    "href": "tutorials/benchmark.html",
+    "title": "Benchmark Tutorial",
+    "section": "",
+    "text": "fasterbench is a comprehensive benchmarking toolkit for PyTorch models. It measures five critical dimensions of model performance:\n\n\n\n\n\n\n\n\nMetric\nWhat It Measures\nWhy It Matters\n\n\n\n\nSize\nDisk size, parameter count\nDeployment storage, download time\n\n\nSpeed\nLatency, throughput\nUser experience, serving costs\n\n\nCompute\nMACs (operations)\nHardware requirements, energy use\n\n\nMemory\nPeak/average memory\nGPU memory limits, batch sizes\n\n\nEnergy\nPower, CO₂ emissions\nOperating costs, sustainability\n\n\n\n\n\n\nTyped results - BenchmarkResult with IDE autocomplete\nBackward compatible - Dict-like access for existing code\nSelective metrics - Benchmark only what you need\nMulti-device - CPU, CUDA, and multi-GPU support\nExport formats - DataFrame, JSON, summary reports",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#overview",
+    "href": "tutorials/benchmark.html#overview",
+    "title": "Benchmark Tutorial",
+    "section": "",
+    "text": "fasterbench is a comprehensive benchmarking toolkit for PyTorch models. It measures five critical dimensions of model performance:\n\n\n\n\n\n\n\n\nMetric\nWhat It Measures\nWhy It Matters\n\n\n\n\nSize\nDisk size, parameter count\nDeployment storage, download time\n\n\nSpeed\nLatency, throughput\nUser experience, serving costs\n\n\nCompute\nMACs (operations)\nHardware requirements, energy use\n\n\nMemory\nPeak/average memory\nGPU memory limits, batch sizes\n\n\nEnergy\nPower, CO₂ emissions\nOperating costs, sustainability\n\n\n\n\n\n\nTyped results - BenchmarkResult with IDE autocomplete\nBackward compatible - Dict-like access for existing code\nSelective metrics - Benchmark only what you need\nMulti-device - CPU, CUDA, and multi-GPU support\nExport formats - DataFrame, JSON, summary reports",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#basic-benchmarking",
+    "href": "tutorials/benchmark.html#basic-benchmarking",
+    "title": "Benchmark Tutorial",
+    "section": "1. Basic Benchmarking",
+    "text": "1. Basic Benchmarking\nThe benchmark() function is the main entry point:\n\nimport torch\nfrom torchvision.models import resnet18, mobilenet_v3_large, efficientnet_b0\nfrom fasterbench import benchmark, BenchmarkResult\n\n# Create sample input\ndummy = torch.randn(1, 3, 224, 224)\n\n# Benchmark a model (using fast metrics for demo)\nresult = benchmark(resnet18(), dummy, metrics=[\"size\", \"speed\", \"compute\"])\nresult\n\n═══ Size ════════════════════════════════════\n  Disk:   44.67 MiB\n  Params: 11.69M\n═══ Speed ═══════════════════════════════════\n  cpu: 33.59 ms  │  29.8 inf/s  │  p99: 61.68 ms\n  cuda: 0.64 ms  │  1562.1 inf/s  │  p99: 0.66 ms\n═══ Compute ═════════════════════════════════\n  MACs: 1824.0 M",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#typed-access",
+    "href": "tutorials/benchmark.html#typed-access",
+    "title": "Benchmark Tutorial",
+    "section": "2. Typed Access",
+    "text": "2. Typed Access\nBenchmarkResult provides typed access to all metrics with IDE autocomplete:\n\n# Size metrics\nprint(f\"Disk size: {result.size.size_mib:.2f} MiB\")\nprint(f\"Parameters: {result.size.num_params:,}\")\n\n# Speed metrics (keyed by device)\nprint(f\"\\nCPU latency: {result.speed['cpu'].mean_ms:.2f} ms\")\nprint(f\"CPU throughput: {result.speed['cpu'].throughput_s:.1f} inf/s\")\nprint(f\"CPU p99 latency: {result.speed['cpu'].p99_ms:.2f} ms\")\n\n# Compute metrics\nprint(f\"\\nMACs: {result.compute.macs_m:.1f} M\")\nprint(f\"MACs available: {result.compute.macs_available}\")\n\nDisk size: 44.67 MiB\nParameters: 11,689,512\n\nCPU latency: 33.59 ms\nCPU throughput: 29.8 inf/s\nCPU p99 latency: 61.68 ms\n\nMACs: 1824.0 M\nMACs available: True",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#backward-compatible-dict-access",
+    "href": "tutorials/benchmark.html#backward-compatible-dict-access",
+    "title": "Benchmark Tutorial",
+    "section": "3. Backward-Compatible Dict Access",
+    "text": "3. Backward-Compatible Dict Access\nFor compatibility with existing code, BenchmarkResult also supports dict-like access:\n\n# Dict-style access\nprint(result[\"size_size_mib\"])\nprint(result[\"speed_cpu_mean_ms\"])\n\n# Iteration\nprint(\"\\nAll metrics:\")\nfor key, value in result.items():\n    print(f\"  {key}: {value}\")\n\n44.66535472869873\n33.58930969238281\n\nAll metrics:\n  size_disk_bytes: 46835019\n  size_size_mib: 44.66535472869873\n  size_num_params: 11689512\n  speed_cpu_p50_ms: 29.3856258392334\n  speed_cpu_p90_ms: 37.92195129394532\n  speed_cpu_p99_ms: 61.68484344482422\n  speed_cpu_mean_ms: 33.58930969238281\n  speed_cpu_std_ms: 11.55258846282959\n  speed_cpu_throughput_s: 29.77137693981172\n  speed_cuda_p50_ms: 0.6376160085201263\n  speed_cuda_p90_ms: 0.6466431796550751\n  speed_cuda_p99_ms: 0.6631737768650058\n  speed_cuda_mean_ms: 0.6401805281639099\n  speed_cuda_std_ms: 0.009303152561187744\n  speed_cuda_throughput_s: 1562.0593816998492\n  compute_macs_m: 1824.034",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#comparing-multiple-models",
+    "href": "tutorials/benchmark.html#comparing-multiple-models",
+    "title": "Benchmark Tutorial",
+    "section": "4. Comparing Multiple Models",
+    "text": "4. Comparing Multiple Models\nExport results to a pandas DataFrame for easy comparison:\n\nimport pandas as pd\n\n# Benchmark multiple models\nmodels = {\n    \"ResNet-18\": resnet18(),\n    \"MobileNet-V3\": mobilenet_v3_large(),\n    \"EfficientNet-B0\": efficientnet_b0(),\n}\n\nresults = {}\nfor name, model in models.items():\n    results[name] = benchmark(model, dummy, metrics=[\"size\", \"speed\", \"compute\"])\n\n# Combine into DataFrame\nrows = []\nfor name, r in results.items():\n    row = {\"model\": name, **r.as_dict()}\n    rows.append(row)\n\ndf = pd.DataFrame(rows)\ndf[[\"model\", \"size_size_mib\", \"size_num_params\", \"speed_cpu_mean_ms\", \"compute_macs_m\"]]\n\n\n\n\n\n\n\n\nmodel\nsize_size_mib\nsize_num_params\nspeed_cpu_mean_ms\ncompute_macs_m\n\n\n\n\n0\nResNet-18\n44.665355\n11689512\n36.195747\n1824.034\n\n\n1\nMobileNet-V3\n21.107375\n5483032\n9.795851\n234.838\n\n\n2\nEfficientNet-B0\n20.453475\n5288548\n15.414814\n415.145",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#json-export",
+    "href": "tutorials/benchmark.html#json-export",
+    "title": "Benchmark Tutorial",
+    "section": "5. JSON Export",
+    "text": "5. JSON Export\nSerialize results to JSON for logging or storage:\n\n# Export to JSON\njson_str = result.to_json()\nprint(json_str)\n\n{\n  \"size_disk_bytes\": 46835019,\n  \"size_size_mib\": 44.66535472869873,\n  \"size_num_params\": 11689512,\n  \"speed_cpu_p50_ms\": 29.3856258392334,\n  \"speed_cpu_p90_ms\": 37.92195129394532,\n  \"speed_cpu_p99_ms\": 61.68484344482422,\n  \"speed_cpu_mean_ms\": 33.58930969238281,\n  \"speed_cpu_std_ms\": 11.55258846282959,\n  \"speed_cpu_throughput_s\": 29.77137693981172,\n  \"speed_cuda_p50_ms\": 0.6376160085201263,\n  \"speed_cuda_p90_ms\": 0.6466431796550751,\n  \"speed_cuda_p99_ms\": 0.6631737768650058,\n  \"speed_cuda_mean_ms\": 0.6401805281639099,\n  \"speed_cuda_std_ms\": 0.009303152561187744,\n  \"speed_cuda_throughput_s\": 1562.0593816998492,\n  \"compute_macs_m\": 1824.034\n}",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#human-readable-summary",
+    "href": "tutorials/benchmark.html#human-readable-summary",
+    "title": "Benchmark Tutorial",
+    "section": "6. Human-Readable Summary",
+    "text": "6. Human-Readable Summary\nGet a quick overview of all metrics with summary():\n\nresult.summary()\n\n═══ Size ════════════════════════════════════\n  Disk:   44.67 MiB\n  Params: 11.69M\n═══ Speed ═══════════════════════════════════\n  cpu: 33.59 ms  │  29.8 inf/s  │  p99: 61.68 ms\n  cuda: 0.64 ms  │  1562.1 inf/s  │  p99: 0.66 ms\n═══ Compute ═════════════════════════════════\n  MACs: 1824.0 M",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#selective-metrics",
+    "href": "tutorials/benchmark.html#selective-metrics",
+    "title": "Benchmark Tutorial",
+    "section": "7. Selective Metrics",
+    "text": "7. Selective Metrics\nOnly compute what you need for faster benchmarking:\n\nquick_result = benchmark(resnet18(), dummy, metrics=[\"size\", \"compute\"])\nprint(f\"Size: {quick_result.size.size_mib:.2f} MiB\")\nprint(f\"MACs: {quick_result.compute.macs_m:.1f} M\")\nprint(f\"Speed measured: {bool(quick_result.speed)}\")  # False - not requested\n\nSize: 44.67 MiB\nMACs: 1824.0 M\nSpeed measured: False",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#visualizing-with-radar-plots",
+    "href": "tutorials/benchmark.html#visualizing-with-radar-plots",
+    "title": "Benchmark Tutorial",
+    "section": "8. Visualizing with Radar Plots",
+    "text": "8. Visualizing with Radar Plots\nCompare models visually using radar plots:\n\nfrom fasterbench.plot import create_radar_plot\n\n# Full benchmark for radar plot (includes energy)\ndummy_batch = torch.randn(8, 3, 224, 224)\n\nresnet_full = benchmark(resnet18(), dummy_batch,\n                        metrics=[\"size\", \"speed\", \"compute\", \"energy\"])\nmobilenet_full = benchmark(mobilenet_v3_large(), dummy_batch,\n                           metrics=[\"size\", \"speed\", \"compute\", \"energy\"])\n\n\n# Create radar plot comparing models\nfig = create_radar_plot(\n    [resnet_full, mobilenet_full],\n    model_names=[\"ResNet-18\", \"MobileNet-V3\"]\n)\nfig.show()",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#summary",
+    "href": "tutorials/benchmark.html#summary",
+    "title": "Benchmark Tutorial",
+    "section": "Summary",
+    "text": "Summary\n\n\n\nFeature\nDescription\n\n\n\n\nbenchmark()\nMain entry point for comprehensive benchmarking\n\n\nBenchmarkResult\nTyped container with IDE autocomplete\n\n\nDict access\nBackward-compatible result[\"key\"] access\n\n\nsummary()\nHuman-readable formatted output\n\n\nto_dataframe()\nExport to pandas DataFrame\n\n\nto_json()\nSerialize to JSON string\n\n\ncreate_radar_plot()\nVisual model comparison",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/benchmark.html#see-also",
+    "href": "tutorials/benchmark.html#see-also",
+    "title": "Benchmark Tutorial",
+    "section": "See Also",
+    "text": "See Also\n\nLayer Profiling Tutorial - Per-layer performance analysis\nBenchmark API - Full API reference\nIndividual Metrics - Size, speed, compute, memory, energy modules",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Benchmark Tutorial"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html",
+    "href": "tutorials/roofline.html",
+    "title": "Roofline analysis",
+    "section": "",
+    "text": "This notebook demonstrates measurement primitives. This library measures; the decisions that use these numbers live in the compression workflow that calls it.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#what-is-a-roofline",
+    "href": "tutorials/roofline.html#what-is-a-roofline",
+    "title": "Roofline analysis",
+    "section": "What is a roofline?",
+    "text": "What is a roofline?\nThe roofline model (Williams et al., 2009) plots a layer’s achieved performance against its arithmetic intensity:\n\nArithmetic intensity (AI) = FLOPs per byte moved from memory. A property of the computation itself.\nAchieved performance = FLOPs per second actually delivered on the device.\nThe roof is the min of two ceilings: a sloped line AI x peak_bandwidth (memory-bound region) and a flat line peak_flops (compute-bound region).\nThe ridge point peak_flops / peak_bandwidth is the AI at which the two ceilings meet. Layers with AI &lt; ridge are memory-bound; layers with AI &gt;= ridge are compute-bound.\n\nOn a log-log plot, the roof looks like a tilted ceiling with a flat top. Each layer becomes a marker underneath that ceiling.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#measuring-hardware-peaks",
+    "href": "tutorials/roofline.html#measuring-hardware-peaks",
+    "title": "Roofline analysis",
+    "section": "Measuring hardware peaks",
+    "text": "Measuring hardware peaks\nmeasure_peaks() empirically probes the device with a large square matmul (for peak FLOPs/s) and a cache-defeating memory copy (for streaming bandwidth). It returns a HardwarePeaks dataclass.\nBy default, TF32 is pinned off on CUDA so the fp32 peak reflects honest fp32 throughput. Pass allow_tf32=True if you want the TF32 peak instead.\n\nimport torch\nfrom fasterbench.roofline import measure_peaks\n\npeaks = measure_peaks(\"cuda\", steps=20, warmup=5)\nprint(peaks)\n\nHardwarePeaks(peak_flops=8.12e+12, peak_bandwidth=5.43e+11, ridge_point=14.95, device='cuda:0', dtype='torch.float32', tf32_enabled=False, cudnn_benchmark=False)\nThe ridge point here is ~15 FLOPs/byte. Any layer below that intensity is memory-bound on this device.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#profiling-resnet-18",
+    "href": "tutorials/roofline.html#profiling-resnet-18",
+    "title": "Roofline analysis",
+    "section": "Profiling ResNet-18",
+    "text": "Profiling ResNet-18\nRooflineAnalyzer profiles a model in a single pass under the hood: forward hooks on every leaf module measure FLOPs (computed analytically for Conv and Linear), bytes moved (weights + input + output per Williams 2009), and wall time.\nIf you do not pass a peaks= argument, it calls measure_peaks() automatically.\n\nfrom torchvision.models import resnet18\nfrom fasterbench.roofline import RooflineAnalyzer\n\nmodel = resnet18()\nsample = torch.randn(1, 3, 224, 224)\n\nra = RooflineAnalyzer(model, sample)\nra.profile(device=\"cuda\", warmup=5, steps=20)\nra.summary(top=10)\n\n=== Roofline =============================================================\n  name                             type           FLOPs      bytes       AI   GFLOPs/s     bound   util%\n  layer4.0.conv2                   Conv2d         231.21M     10.01M    23.10      820.14   compute   10.1%\n  layer4.1.conv1                   Conv2d         231.21M     10.01M    23.10      810.22   compute   10.0%\n  layer4.1.conv2                   Conv2d         231.21M     10.01M    23.10      812.49   compute   10.0%\n  layer3.0.conv2                   Conv2d         115.61M      5.11M    22.62      402.33   compute    5.0%\n  ...\nEach row shows a layer’s FLOPs, bytes moved, arithmetic intensity, achieved throughput, bound classification, and utilization (fraction of the roof reached).",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#reading-the-plot",
+    "href": "tutorials/roofline.html#reading-the-plot",
+    "title": "Roofline analysis",
+    "section": "Reading the plot",
+    "text": "Reading the plot\nra.plot() returns a plotly Figure with the roof line, the ridge point, and one marker per layer. Memory-bound layers are colored teal, compute-bound layers are darker teal.\n\nfig = ra.plot(title=\"ResNet-18 roofline (CUDA)\")\nfig.show()\n\nHow to read the plot:\n\nThe diagonal segment (slope 1 on log-log) is the memory bandwidth ceiling.\nThe flat segment is the compute ceiling.\nA marker near the roof indicates a layer achieving a high fraction of what the hardware permits at its intensity.\nA marker far below the roof indicates a layer leaving hardware utilization on the table.\nA marker to the left of the ridge point sits in the memory-bound region; one to the right sits in the compute-bound region.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#comparing-input-resolutions",
+    "href": "tutorials/roofline.html#comparing-input-resolutions",
+    "title": "Roofline analysis",
+    "section": "Comparing input resolutions",
+    "text": "Comparing input resolutions\nArithmetic intensity is a function of the computation and the tensor shapes. Increasing spatial resolution grows activation memory faster than it grows FLOPs for many conv layers, so markers shift further into the memory-bound region.\n\nfor side in (224, 512):\n    x = torch.randn(1, 3, side, side)\n    ra = RooflineAnalyzer(model, x, peaks=peaks)\n    ra.profile(device=\"cuda\", warmup=3, steps=10)\n    mem_bound = sum(1 for r in ra.results if r.bound == \"memory\")\n    comp_bound = sum(1 for r in ra.results if r.bound == \"compute\")\n    print(f\"{side}x{side}: {mem_bound} memory-bound, {comp_bound} compute-bound\")\n\n224x224: 18 memory-bound, 42 compute-bound\n512x512: 31 memory-bound, 29 compute-bound\nAt 512x512 many more layers fall below the ridge point because activation bytes scale with H x W while FLOPs scale with H x W for a fixed kernel - but the constant factor differs, and BN/ReLU/pooling layers (which have very low AI) dominate when activations are large.",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#summary",
+    "href": "tutorials/roofline.html#summary",
+    "title": "Roofline analysis",
+    "section": "Summary",
+    "text": "Summary\n\n\n\nTool\nPurpose\n\n\n\n\nmeasure_peaks()\nEmpirically probe peak FLOPs/s and streaming bandwidth\n\n\nHardwarePeaks\nDataclass holding device peaks and ridge point\n\n\nRooflineAnalyzer\nPer-layer roofline profiler\n\n\nRooflineAnalyzer.profile()\nMeasure FLOPs, bytes moved, and time per layer\n\n\nRooflineAnalyzer.summary()\nPrint a table of the slowest layers with their roofline metrics\n\n\nRooflineAnalyzer.plot()\nPlotly figure with roof ceiling and per-layer markers\n\n\nRooflinePoint\nDataclass for a single layer’s measurement\n\n\nclear_peaks_cache()\nReset the measure_peaks() cache",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "tutorials/roofline.html#see-also",
+    "href": "tutorials/roofline.html#see-also",
+    "title": "Roofline analysis",
+    "section": "See Also",
+    "text": "See Also\n\nRoofline API - Full reference\nProfiling Tutorial - Per-layer speed/memory/size/compute profiling\nCompute metrics - Underlying FLOPs counting",
+    "crumbs": [
+      "Report an Issue",
+      "Tutorials",
+      "Roofline analysis"
+    ]
+  },
+  {
+    "objectID": "metrics/energy.html#see-also",
+    "href": "metrics/energy.html#see-also",
+    "title": "Energy",
+    "section": "See Also",
+    "text": "See Also\n\nMemory — Memory measurement\nBenchmark — Unified API",
+    "crumbs": [
+      "Report an Issue",
+      "Metrics",
+      "Energy"
+    ]
+  },
+  {
+    "objectID": "metrics/speed.html#see-also",
+    "href": "metrics/speed.html#see-also",
+    "title": "Speed",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark - Unified benchmarking with benchmark()\nProfiling - Per-layer speed analysis with LayerProfiler\nMemory - Memory consumption metrics\nProfiling Tutorial - Practical examples of sweep functions",
+    "crumbs": [
+      "Report an Issue",
+      "Metrics",
+      "Speed"
+    ]
+  },
+  {
+    "objectID": "analysis/profiling.html#see-also",
+    "href": "analysis/profiling.html#see-also",
+    "title": "Profiling",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark — Unified API\nProfiling Tutorial — Step-by-step guide",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Profiling"
+    ]
+  },
+  {
+    "objectID": "analysis/report.html",
+    "href": "analysis/report.html",
+    "title": "Report",
+    "section": "",
+    "text": "Report and ComparisonReport generate professional benchmark reports in console, HTML, and Markdown. ComparisonReport computes metric deltas and highlights improvements.",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Report"
+    ]
+  },
+  {
+    "objectID": "analysis/report.html#overview",
+    "href": "analysis/report.html#overview",
+    "title": "Report",
+    "section": "",
+    "text": "Report and ComparisonReport generate professional benchmark reports in console, HTML, and Markdown. ComparisonReport computes metric deltas and highlights improvements.",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Report"
+    ]
+  },
+  {
+    "objectID": "analysis/report.html#see-also",
+    "href": "analysis/report.html#see-also",
+    "title": "Report",
+    "section": "See Also",
+    "text": "See Also\n\nBenchmark — Unified benchmarking API\nReport Tutorial — Full compression workflow",
+    "crumbs": [
+      "Report an Issue",
+      "Analysis",
+      "Report"
+    ]
+  }
+]

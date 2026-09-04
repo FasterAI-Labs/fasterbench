@@ -1,0 +1,1 @@
+Sitemap: https://FasterAI-Labs.github.io/fasterbench/sitemap.xml
