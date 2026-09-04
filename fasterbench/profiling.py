@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .core import _bytes_to_mib, _device_ctx, _on_device, _section, _fmt_table, _fmt_float, _fmt_macs
+from .core import _bytes_to_mib, _device_ctx, _measuring, _section, _fmt_table, _fmt_float, _fmt_macs
 
 # %% auto #0
 __all__ = ['LayerProfiler']
@@ -177,7 +177,7 @@ def _profile_layers(
     config = _METRIC_CONFIG[metric]
     col = config["col"]
     
-    with _device_ctx(device) as dev, _on_device(model.eval(), dev) as model:
+    with _device_ctx(device) as dev, _measuring(model, dev) as model:
         sample = sample.to(dev)
         
         leaf_mods = _leaf_modules(model)

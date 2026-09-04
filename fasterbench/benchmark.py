@@ -126,6 +126,7 @@ def benchmark(
     if sample.dim() == 0:
         raise ValueError("sample must have at least 1 dimension")
 
+    # manual restore: also covers compute_compute, which never sets eval mode
     was_training = model.training
     model.eval()
 
@@ -138,5 +139,4 @@ def benchmark(
             energy=compute_energy_multi(model, sample, devices=energy_devices, **kwargs) if "energy" in metrics_set else {},
         )
     finally:
-        if was_training:
-            model.train()
+        model.train(was_training)
