@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 import plotly.graph_objects as go
 
-from .core import _device_ctx, _on_device, _sync, _fmt_float, _section
+from .core import _device_ctx, _measuring, _sync, _fmt_float, _section
 from .profiling import _leaf_modules, _tensor_bytes, _output_bytes
 
 # %% auto #0
@@ -304,7 +304,7 @@ class RooflineAnalyzer:
             if self.peaks is None:
                 self.peaks = measure_peaks(dev, dtype=self.sample.dtype)
 
-            with _on_device(self.model.eval(), dev) as model:
+            with _measuring(self.model, dev) as model:
                 sample = self.sample.to(dev)
                 leaf_mods = _leaf_modules(model)
 

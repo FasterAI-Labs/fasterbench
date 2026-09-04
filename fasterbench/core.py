@@ -153,3 +153,14 @@ def _run_on_devices(
             warnings.warn(f"Unexpected error during {metric_name} benchmark on {d}: {e}")
             out[d_str] = nan_factory(d_str)
     return out
+
+# %% ../nbs/core/core.ipynb #44ce3eab
+@contextlib.contextmanager
+def _measuring(model: torch.nn.Module, dev: str | torch.device):
+    """Yield `model` on `dev` in eval mode, then restore its device and training mode."""
+    was_training = model.training
+    try:
+        with _on_device(model, dev) as m:
+            yield m.eval()
+    finally:
+        model.train(was_training)

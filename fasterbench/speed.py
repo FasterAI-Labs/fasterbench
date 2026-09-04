@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 from torch.utils.benchmark import Timer
 
-from .core import _device_ctx, _on_device, _sync, _run_on_devices, _ensure_device_supported
+from .core import _device_ctx, _measuring, _sync, _run_on_devices, _ensure_device_supported
 
 # %% auto #0
 __all__ = ['SpeedMetrics', 'compute_speed', 'compute_speed_multi', 'sweep_threads', 'sweep_batch_sizes', 'sweep_latency']
@@ -69,7 +69,7 @@ def _forward_latencies(
 
     with _device_ctx(device) as dev:
         _ensure_device_supported(model, dev)  # quantized ops are CPU-only; avoid SIGSEGV
-        with _on_device(model.eval(), dev) as model:
+        with _measuring(model, dev) as model:
             sample = sample.to(dev, non_blocking=True)
 
             for _ in range(warmup):
