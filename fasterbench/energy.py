@@ -8,7 +8,7 @@ from typing import Sequence
 
 import torch
 
-from .core import _device_ctx, _sync, _run_on_devices, _ensure_device_supported
+from .core import _device_ctx, _on_device, _sync, _run_on_devices, _ensure_device_supported
 
 try:
     from codecarbon import EmissionsTracker, OfflineEmissionsTracker
@@ -95,22 +95,22 @@ def compute_energy(
 
     with _device_ctx(device) as dev:
         _ensure_device_supported(model, dev)  # quantized ops are CPU-only; avoid SIGSEGV
-        model = model.eval().to(dev)
-        sample = sample.to(dev, non_blocking=True)
+        with _on_device(model.eval(), dev) as model:
+            sample = sample.to(dev, non_blocking=True)
 
-        for _ in range(warmup):
-            model(sample)
-        _sync(dev)
-
-        tracker.start()
-        try:
-            t0 = time.perf_counter()
-            for _ in range(steps):
+            for _ in range(warmup):
                 model(sample)
             _sync(dev)
-        finally:
-            tracker.stop()
-        dur_s = time.perf_counter() - t0
+
+            tracker.start()
+            try:
+                t0 = time.perf_counter()
+                for _ in range(steps):
+                    model(sample)
+                _sync(dev)
+            finally:
+                tracker.stop()
+            dur_s = time.perf_counter() - t0
 
     # codecarbon silently fails if another instance is running,
     # leaving final_emissions_data as None

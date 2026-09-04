@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import contextlib, warnings
+from itertools import chain
 import torch
 
 # %% auto #0
@@ -51,6 +52,19 @@ def _device_ctx(dev: str | torch.device):  # device string or torch.device
         warnings.warn("CUDA requested but not available – falling back to CPU")
         dev = torch.device("cpu")
     yield dev
+
+
+@contextlib.contextmanager
+def _on_device(model: torch.nn.Module, dev: str | torch.device):
+    """Yield `model` on `dev`, then move it back where it was."""
+    t = next(chain(model.parameters(), model.buffers()), None)
+    orig = t.device if t is not None else dev  # no tensors: nothing to restore
+    try:
+        model.to(dev)
+        yield model
+    finally:
+        model.to(orig)
+
 
 def _sync(dev: torch.device) -> None:  # device to synchronize
     """Synchronize CUDA device if applicable."""

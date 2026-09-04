@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 from torch.utils.benchmark import Timer
 
-from .core import _device_ctx, _sync, _run_on_devices, _ensure_device_supported
+from .core import _device_ctx, _on_device, _sync, _run_on_devices, _ensure_device_supported
 
 # %% auto #0
 __all__ = ['SpeedMetrics', 'compute_speed', 'compute_speed_multi', 'sweep_threads', 'sweep_batch_sizes', 'sweep_latency']
@@ -69,33 +69,33 @@ def _forward_latencies(
 
     with _device_ctx(device) as dev:
         _ensure_device_supported(model, dev)  # quantized ops are CPU-only; avoid SIGSEGV
-        model.eval().to(dev)
-        sample = sample.to(dev, non_blocking=True)
+        with _on_device(model.eval(), dev) as model:
+            sample = sample.to(dev, non_blocking=True)
 
-        for _ in range(warmup):
-            model(sample)
-        _sync(dev)
+            for _ in range(warmup):
+                model(sample)
+            _sync(dev)
 
-        lat: list[float] = []
-        if use_torch_timer and dev.type == "cpu":
-            t = Timer(stmt="model(x)", globals={"model": model, "x": sample})
-            m = t.blocked_autorange(min_run_time=0.3)
-            per_iter = (np.asarray(m.raw_times) / m.number_per_run) * 1e3
-            lat = per_iter.tolist()
-        elif dev.type == "cuda":
-            start_evt, end_evt = torch.cuda.Event(True), torch.cuda.Event(True)
-            for _ in range(steps):
-                start_evt.record()
-                model(sample)
-                end_evt.record()
-                _sync(dev)
-                lat.append(start_evt.elapsed_time(end_evt))
-        else:
-            for _ in range(steps):
-                t0 = time.perf_counter()
-                model(sample)
-                lat.append((time.perf_counter() - t0) * 1e3)
-        return np.asarray(lat, dtype=np.float32)
+            lat: list[float] = []
+            if use_torch_timer and dev.type == "cpu":
+                t = Timer(stmt="model(x)", globals={"model": model, "x": sample})
+                m = t.blocked_autorange(min_run_time=0.3)
+                per_iter = (np.asarray(m.raw_times) / m.number_per_run) * 1e3
+                lat = per_iter.tolist()
+            elif dev.type == "cuda":
+                start_evt, end_evt = torch.cuda.Event(True), torch.cuda.Event(True)
+                for _ in range(steps):
+                    start_evt.record()
+                    model(sample)
+                    end_evt.record()
+                    _sync(dev)
+                    lat.append(start_evt.elapsed_time(end_evt))
+            else:
+                for _ in range(steps):
+                    t0 = time.perf_counter()
+                    model(sample)
+                    lat.append((time.perf_counter() - t0) * 1e3)
+            return np.asarray(lat, dtype=np.float32)
 
 
 #| export
